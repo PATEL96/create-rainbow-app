@@ -3,6 +3,9 @@
   "version": "1.0.1",
   "main": "index.js",
   "license": "MIT",
+  "publishConfig": {
+    "@PATEL96:registry": "https://npm.pkg.github.com"
+  },
   "dependencies": {
     "git-clone": "^0.2.0"
   },
