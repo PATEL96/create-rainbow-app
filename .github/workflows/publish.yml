@@ -13,5 +13,5 @@ jobs:
       env:
         NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
       run: |
-        npm version patch -m "Upgrade to %s [skip ci]"
+        npm version patch -m "Upgrade to new version"
         npm publish
