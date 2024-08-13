@@ -1,4 +1,4 @@
-name: Node.js Package
+name: Publish Package
 
 on:
   push:
@@ -6,19 +6,27 @@ on:
       - main
 
 jobs:
-  publish-gpr:
-    needs: build
+  publish:
     runs-on: ubuntu-latest
-    permissions:
-      packages: write
-      contents: read
+
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 16
-          registry-url: https://npm.pkg.github.com/
-      - run: npm ci
-      - run: npm publish
-        env:
-          NODE_AUTH_TOKEN: ${{secrets.NPM_TOKEN}}
+    - uses: actions/checkout@v4
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '16'
+        registry-url: 'https://registry.npmjs.org/'
+
+    - name: Install dependencies
+      run: npm install
+
+    - name: Run tests
+      run: npm test
+
+    - name: Bump version and publish to npm
+      env:
+        NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      run: |
+        npm version patch -m "Upgrade to %s [skip ci]"
+        npm publish
