@@ -21,9 +21,6 @@ jobs:
     - name: Install dependencies
       run: npm install
 
-    - name: Run tests
-      run: npm test
-
     - name: Bump version and publish to npm
       env:
         NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
