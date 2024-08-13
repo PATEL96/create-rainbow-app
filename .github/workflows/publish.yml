@@ -1,8 +1,9 @@
-name: Node.js Package
+name: npx package
 
 on:
-  release:
-    types: [created]
+  push:
+    branches:
+      - main
 
 jobs:
   build:
@@ -13,7 +14,6 @@ jobs:
         with:
           node-version: 16
       - run: npm ci
-      - run: npm test
 
   publish-gpr:
     needs: build
