@@ -6,12 +6,8 @@ on:
       - main
 
 jobs:
-
   publish:
     runs-on: ubuntu-latest
-    permissions:
-      packages: write
-      contents: read
     steps:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
