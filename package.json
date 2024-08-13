@@ -10,6 +10,28 @@
     "git-clone": "^0.2.0"
   },
   "bin": {
-    "create-rainbow-app": "./index.js"
-  }
+    "create-rainbow-app": "index.js"
+  },
+  "description": "A Module to make DAPP easily and quickly",
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/PATEL96/create-rainbow-app.git"
+  },
+  "keywords": [
+    "RainbowKit",
+    "Ethereum",
+    "Metamask",
+    "Wallets",
+    "Web3Auth",
+    "NextJs"
+  ],
+  "author": "PATEL96",
+  "bugs": {
+    "url": "https://github.com/PATEL96/create-rainbow-app/issues"
+  },
+  "homepage": "https://github.com/PATEL96/create-rainbow-app#readme"
 }
