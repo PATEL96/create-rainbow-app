@@ -20,4 +20,7 @@ gitClone(repoUrl, targetPath, null, () => {
     fs.rmSync(path.join(targetPath, '.git'), { recursive: true, force: true });
     console.log('Removed .git directory');
     console.log(`Project ${projectName} is ready!`);
+    console.log(`run tese to move ahead`)
+    console.log(`cd ${projectName}`)
+    console.log('yarn install')
 });
