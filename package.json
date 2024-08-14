@@ -7,13 +7,13 @@
     "@PATEL96:registry": "https://npm.pkg.github.com"
   },
   "dependencies": {
+    "chalk": "^5.3.0",
     "git-clone": "^0.2.0"
   },
   "bin": {
     "create-rainbow-app": "index.js"
   },
   "description": "A Module to make DAPP easily and quickly",
-  "devDependencies": {},
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
