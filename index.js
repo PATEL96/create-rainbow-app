@@ -41,7 +41,7 @@ const path = require('path');
 
         console.log(chalk.green(`Project ${projectName} is ready!`));
         console.log(chalk.yellow(`To start working on your project, run:`));
-        console.log(chalk.cyan(`cd ${projectName}`));
-        console.log(chalk.magenta('yarn dev')); // or any other command you want to suggest
+        console.log(chalk.cyan(`\t cd ${projectName}`));
+        console.log(chalk.cyan('\t yarn dev')); // or any other command you want to suggest
     });
 })();
