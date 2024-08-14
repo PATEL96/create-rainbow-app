@@ -16,9 +16,7 @@ if (!projectName) {
 const targetPath = path.join(process.cwd(), projectName);
 
 gitClone(repoUrl, targetPath, null, () => {
-    console.log(`Cloned to ${targetPath}`);
     fs.rmSync(path.join(targetPath, '.git'), { recursive: true, force: true });
-    console.log('Removed .git directory');
 
     // Change directory to the target path
     process.chdir(targetPath);
