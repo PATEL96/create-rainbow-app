@@ -34,9 +34,7 @@ const inquirer = require('inquirer');
             name: 'template',
             message: 'Choose a template to start with:',
             choices: [
-                { name: 'Rainbowkit Template', value: 'rainbowkit' },
-                { name: 'Template 2', value: 'template-2' },
-                { name: 'Template 3', value: 'template-3' }
+                { name: 'NextJs App Router Build', value: 'template-1' },
             ],
         }
     ]);
