@@ -7,7 +7,6 @@ const path = require('path');
 (async () => {
     const chalk = (await import('chalk')).default;
 
-    // Check if yarn is installed
     try {
         execSync('yarn --version', { stdio: 'ignore' });
     } catch (error) {
@@ -33,7 +32,6 @@ const path = require('path');
         process.exit(1);
     }
 
-    // Copy the selected template to the target directory
     try {
         await fs.copy(templatePath, targetPath);
         console.log(chalk.green(`Template "${templateName}" copied to ${targetPath}`));
@@ -44,9 +42,11 @@ const path = require('path');
 
     process.chdir(targetPath);
 
-    // Install required packages
     console.log(chalk.blue('Installing packages...'));
     execSync('yarn install', { stdio: 'inherit' });
+
+    console.log(chalk.blue('Initializing a new Git repository...'));
+    execSync('git init', { stdio: 'inherit' });
 
     console.log(chalk.green(`Project ${projectName} is ready!`));
     console.log(chalk.yellow(`To start working on your project, run:`));
