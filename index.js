@@ -28,19 +28,8 @@ const inquirer = require('inquirer');
     const targetPath = path.join(process.cwd(), projectName);
 
     // Prompt the user to select a template
-    const answers = await inquirer.prompt([
-        {
-            type: 'list',
-            name: 'template',
-            message: 'Choose a template to start with:',
-            choices: [
-                { name: 'NextJs App Router Build', value: 'template-1' },
-            ],
-        }
-    ]);
 
-    const { template } = answers;
-    const templatePath = path.join(__dirname, 'templates', template);
+    const templatePath = path.join(__dirname, 'templates', 'template-1');
 
     // Copy the selected template to the target directory
     try {
