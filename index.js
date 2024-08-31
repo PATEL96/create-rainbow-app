@@ -1,15 +1,13 @@
 #!/usr/bin/env node
 
 const { execSync } = require('child_process');
-const gitClone = require('git-clone');
-const fs = require('fs');
+const fs = require('fs-extra');
 const path = require('path');
+const inquirer = require('inquirer');
 
 (async () => {
     // Dynamically import chalk
     const chalk = (await import('chalk')).default;
-
-    const repoUrl = 'https://github.com/PATEL96/BaseTemplate-Rainbowkit.git';
 
     // Check if yarn is installed
     try {
@@ -29,19 +27,41 @@ const path = require('path');
 
     const targetPath = path.join(process.cwd(), projectName);
 
-    gitClone(repoUrl, targetPath, null, () => {
-        fs.rmSync(path.join(targetPath, '.git'), { recursive: true, force: true });
+    // Prompt the user to select a template
+    const answers = await inquirer.prompt([
+        {
+            type: 'list',
+            name: 'template',
+            message: 'Choose a template to start with:',
+            choices: [
+                { name: 'Rainbowkit Template', value: 'rainbowkit' },
+                { name: 'Template 2', value: 'template-2' },
+                { name: 'Template 3', value: 'template-3' }
+            ],
+        }
+    ]);
 
-        // Change directory to the target path
-        process.chdir(targetPath);
+    const { template } = answers;
+    const templatePath = path.join(__dirname, 'templates', template);
 
-        // Install required packages
-        console.log(chalk.blue('Installing packages...'));
-        execSync('yarn install', { stdio: 'inherit' }); // or 'npm install'
+    // Copy the selected template to the target directory
+    try {
+        await fs.copy(templatePath, targetPath);
+        console.log(chalk.green(`Template ${template} copied to ${targetPath}`));
+    } catch (error) {
+        console.error(chalk.red('Error copying template:', error));
+        process.exit(1);
+    }
 
-        console.log(chalk.green(`Project ${projectName} is ready!`));
-        console.log(chalk.yellow(`To start working on your project, run:`));
-        console.log(chalk.cyan(`\t cd ${projectName}`));
-        console.log(chalk.cyan('\t yarn dev')); // or any other command you want to suggest
-    });
+    // Change directory to the target path
+    process.chdir(targetPath);
+
+    // Install required packages
+    console.log(chalk.blue('Installing packages...'));
+    execSync('yarn install', { stdio: 'inherit' }); // or 'npm install'
+
+    console.log(chalk.green(`Project ${projectName} is ready!`));
+    console.log(chalk.yellow(`To start working on your project, run:`));
+    console.log(chalk.cyan(`\t cd ${projectName}`));
+    console.log(chalk.cyan('\t yarn dev')); // or any other command you want to suggest
 })();
