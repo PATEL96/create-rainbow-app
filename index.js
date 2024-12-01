@@ -11,31 +11,13 @@ const path = require('path');
 
     const repoUrl = 'https://github.com/PATEL96/BaseTemplate-Rainbowkit.git';
 
-    const checkCommand = (cmd) => {
-        try {
-            execSync(`${cmd} --version`, { stdio: 'ignore' });
-            return true;
-        } catch {
-            return false;
-        }
-    };
-
-    let packageManager = null;
-
-    if (checkCommand('bun')) {
-        packageManager = 'bun';
-    } else if (checkCommand('yarn')) {
-        packageManager = 'yarn';
-    } else if (checkCommand('npm')) {
-        packageManager = 'npm';
-    }
-
-    if (!packageManager) {
-        console.error(chalk.red('No package manager found!'));
-        console.log(chalk.yellow('Please install one of the following:'));
-        console.log(chalk.blue('- Bun: https://bun.sh/'));
-        console.log(chalk.blue('- Yarn: https://yarnpkg.com/getting-started/install'));
-        console.log(chalk.blue('- npm (comes with Node.js): https://nodejs.org/'));
+    // Check if yarn is installed
+    try {
+        execSync('yarn --version', { stdio: 'ignore' });
+    } catch (error) {
+        console.error(chalk.red('Yarn is required to run this script.'));
+        console.log(chalk.yellow('Please install Yarn from the following link:'));
+        console.log(chalk.blue('https://yarnpkg.com/getting-started/install'));
         process.exit(1);
     }
 
@@ -54,14 +36,12 @@ const path = require('path');
         process.chdir(targetPath);
 
         // Install required packages
-        console.log(chalk.blue(`Installing packages using ${packageManager}...`));
-        const installCommand = packageManager === 'bun' ? 'bun install --force' : `${packageManager} install --force`;
-        execSync(installCommand, { stdio: 'inherit' });
+        console.log(chalk.blue('Installing packages...'));
+        execSync('yarn install --force', { stdio: 'inherit' }); // or 'npm install'
 
         console.log(chalk.green(`Project ${projectName} is ready!`));
-        console.log(chalk.yellow('To start working on your project, run:'));
+        console.log(chalk.yellow(`To start working on your project, run:`));
         console.log(chalk.cyan(`\t cd ${projectName}`));
-        const devCommand = packageManager === 'bun' ? 'bun dev' : `${packageManager} dev`;
-        console.log(chalk.cyan(`\t ${devCommand}`));
+        console.log(chalk.cyan('\t yarn dev')); // or any other command you want to suggest
     });
 })();
