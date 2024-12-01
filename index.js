@@ -55,7 +55,7 @@ const path = require('path');
 
         // Install required packages
         console.log(chalk.blue(`Installing packages using ${packageManager}...`));
-        const installCommand = packageManager === 'bun' ? 'bun install' : `${packageManager} install`;
+        const installCommand = packageManager === 'bun' ? 'bun install --force' : `${packageManager} install --force`;
         execSync(installCommand, { stdio: 'inherit' });
 
         console.log(chalk.green(`Project ${projectName} is ready!`));
