@@ -11,14 +11,22 @@ const path = require('path');
 
     const repoUrl = 'https://github.com/PATEL96/BaseTemplate-Rainbowkit.git';
 
-    // Check if yarn is installed
+    let packageManager = 'yarn';
+
+    // Check if Bun is installed
     try {
-        execSync('yarn --version', { stdio: 'ignore' });
-    } catch (error) {
-        console.error(chalk.red('Yarn is required to run this script.'));
-        console.log(chalk.yellow('Please install Yarn from the following link:'));
-        console.log(chalk.blue('https://yarnpkg.com/getting-started/install'));
-        process.exit(1);
+        execSync('bun --version', { stdio: 'ignore' });
+        packageManager = 'bun';
+    } catch (bunError) {
+        // Fallback to Yarn if Bun is not available
+        try {
+            execSync('yarn --version', { stdio: 'ignore' });
+        } catch (yarnError) {
+            console.error(chalk.red('Neither Bun nor Yarn is installed. One of these is required to run this script.'));
+            console.log(chalk.yellow('Install Bun from:'), chalk.blue('https://bun.sh/'));
+            console.log(chalk.yellow('Install Yarn from:'), chalk.blue('https://yarnpkg.com/getting-started/install'));
+            process.exit(1);
+        }
     }
 
     const projectName = process.argv[2];
@@ -37,11 +45,15 @@ const path = require('path');
 
         // Install required packages
         console.log(chalk.blue('Installing packages...'));
-        execSync('yarn install --force', { stdio: 'inherit' }); // or 'npm install'
+        execSync(`${packageManager} install`, { stdio: 'inherit' });
 
         console.log(chalk.green(`Project ${projectName} is ready!`));
         console.log(chalk.yellow(`To start working on your project, run:`));
         console.log(chalk.cyan(`\t cd ${projectName}`));
-        console.log(chalk.cyan('\t yarn dev')); // or any other command you want to suggest
+        if (packageManager === 'bun') {
+            console.log(chalk.cyan('\t bun dev')); // Suggested command for Bun
+        } else {
+            console.log(chalk.cyan('\t yarn dev')); // Suggested command for Yarn
+        }
     });
 })();
