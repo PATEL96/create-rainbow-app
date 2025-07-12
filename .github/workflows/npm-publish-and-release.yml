@@ -1,228 +1,287 @@
 name: Publish and Release to npm
 
 on:
-  # Automatic triggers
-  push:
-    branches: [main]
-    tags: ["v*"]
+    # Automatic triggers
+    push:
+        branches: [main]
+        tags: ["v*"]
 
-  # Manual trigger with version selection
-  workflow_dispatch:
-    inputs:
-      version_type:
-        description: "Version bump type"
-        required: false
-        default: "patch"
-        type: choice
-        options:
-          - patch
-          - minor
-          - major
-      release_notes:
-        description: "Release notes"
-        required: false
-        type: string
-      skip_version_bump:
-        description: "Skip version bump (use current version)"
-        required: false
-        default: false
-        type: boolean
+    # Manual trigger with version selection
+    workflow_dispatch:
+        inputs:
+            version_type:
+                description: "Version bump type"
+                required: false
+                default: "patch"
+                type: choice
+                options:
+                    - patch
+                    - minor
+                    - major
+            release_notes:
+                description: "Release notes"
+                required: false
+                type: string
+            skip_version_bump:
+                description: "Skip version bump (use current version)"
+                required: false
+                default: false
+                type: boolean
 
 jobs:
-  publish-npm:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      packages: write
+    publish-npm:
+        runs-on: ubuntu-latest
+        permissions:
+            contents: write
+            packages: write
 
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@v3
+              with:
+                  fetch-depth: 0
+                  token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Setup Git User
-        if: github.event_name == 'workflow_dispatch' && !inputs.skip_version_bump
-        run: |
-          git config --global user.name "GitHub Actions"
-          git config --global user.email "actions@github.com"
+            - name: Setup Git User
+              if: github.event_name == 'workflow_dispatch' && !inputs.skip_version_bump
+              run: |
+                  git config --global user.name "GitHub Actions"
+                  git config --global user.email "actions@github.com"
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: "18"
-          registry-url: "https://registry.npmjs.org/"
+            - name: Setup Node.js
+              uses: actions/setup-node@v3
+              with:
+                  node-version: "18"
+                  registry-url: "https://registry.npmjs.org/"
 
-      - name: Install dependencies
-        run: npm ci || npm install
+            - name: Install dependencies
+              run: npm ci || npm install
 
-      # STEP 1: Get current version information
-      - name: Get current version
-        id: current_version
-        run: |
-          # Display current version
-          CURRENT_VERSION=$(node -e "console.log(require('./package.json').version);")
-          echo "Current version: $CURRENT_VERSION"
-          echo "version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+            # STEP 1: Get current version information
+            - name: Get current version
+              id: current_version
+              run: |
+                  # Display current version
+                  CURRENT_VERSION=$(node -e "console.log(require('./package.json').version);")
+                  echo "Current version: $CURRENT_VERSION"
+                  echo "version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
 
-      # STEP 2: Handle version bumping for manual workflow runs
-      - name: Bump version (for manual workflow)
-        id: version_bump
-        if: github.event_name == 'workflow_dispatch' && !inputs.skip_version_bump
-        run: |
-          # Bump version using npm version command
-          npm version ${{ inputs.version_type }} --no-git-tag-version
+            # STEP 2: Handle version bumping for manual workflow runs
+            - name: Bump version (for manual workflow)
+              id: version_bump
+              if: github.event_name == 'workflow_dispatch' && !inputs.skip_version_bump
+              run: |
+                  # Bump version using npm version command
+                  npm version ${{ inputs.version_type }} --no-git-tag-version
 
-          # Get the new version
-          NEW_VERSION=$(node -e "console.log(require('./package.json').version);")
-          echo "Initial bump to version: $NEW_VERSION"
-          echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
+                  # Get the new version
+                  NEW_VERSION=$(node -e "console.log(require('./package.json').version);")
+                  echo "Initial bump to version: $NEW_VERSION"
+                  echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
 
-      # STEP 3: Check for existing tags and resolve conflicts
-      - name: Check for existing tags and handle conflicts
-        id: check_tag
-        if: github.event_name == 'workflow_dispatch' && !inputs.skip_version_bump
-        run: |
-          # Check if the tag already exists
-          TAG_EXISTS=$(git ls-remote --tags origin refs/tags/v${{ steps.version_bump.outputs.version }} | wc -l)
-          echo "Tag check result: $TAG_EXISTS"
+            # STEP 3: Check for existing tags and resolve conflicts
+            - name: Check for existing tags and handle conflicts
+              id: check_tag
+              if: github.event_name == 'workflow_dispatch' && !inputs.skip_version_bump
+              run: |
+                  # Check if the tag already exists
+                  TAG_EXISTS=$(git ls-remote --tags origin refs/tags/v${{ steps.version_bump.outputs.version }} | wc -l)
+                  echo "Tag check result: $TAG_EXISTS"
 
-          if [ "$TAG_EXISTS" -gt "0" ]; then
-            echo "Tag v${{ steps.version_bump.outputs.version }} already exists, trying to find a unique version"
+                  if [ "$TAG_EXISTS" -gt "0" ]; then
+                    echo "Tag v${{ steps.version_bump.outputs.version }} already exists, trying to find a unique version"
 
-            # Try up to 10 patch versions to find an unused one
-            CURRENT_VERSION="${{ steps.version_bump.outputs.version }}"
-            UNIQUE_VERSION=""
+                    # Try up to 10 patch versions to find an unused one
+                    CURRENT_VERSION="${{ steps.version_bump.outputs.version }}"
+                    UNIQUE_VERSION=""
 
-            for i in {1..10}; do
-              # Bump the patch version
-              npm version patch --no-git-tag-version
-              CANDIDATE_VERSION=$(node -e "console.log(require('./package.json').version);")
-              echo "Trying version: $CANDIDATE_VERSION"
+                    for i in {1..10}; do
+                      # Bump the patch version
+                      npm version patch --no-git-tag-version
+                      CANDIDATE_VERSION=$(node -e "console.log(require('./package.json').version);")
+                      echo "Trying version: $CANDIDATE_VERSION"
 
-              # Check if this tag exists
-              CANDIDATE_EXISTS=$(git ls-remote --tags origin refs/tags/v$CANDIDATE_VERSION | wc -l)
+                      # Check if this tag exists
+                      CANDIDATE_EXISTS=$(git ls-remote --tags origin refs/tags/v$CANDIDATE_VERSION | wc -l)
 
-              if [ "$CANDIDATE_EXISTS" -eq "0" ]; then
-                UNIQUE_VERSION="$CANDIDATE_VERSION"
-                echo "Found unique version: $UNIQUE_VERSION"
-                break
-              fi
-            done
+                      if [ "$CANDIDATE_EXISTS" -eq "0" ]; then
+                        UNIQUE_VERSION="$CANDIDATE_VERSION"
+                        echo "Found unique version: $UNIQUE_VERSION"
+                        break
+                      fi
+                    done
 
-            if [ -z "$UNIQUE_VERSION" ]; then
-              echo "::error::Failed to find a unique version after 10 attempts"
-              exit 1
-            fi
+                    if [ -z "$UNIQUE_VERSION" ]; then
+                      echo "::error::Failed to find a unique version after 10 attempts"
+                      exit 1
+                    fi
 
-            echo "final_version=$UNIQUE_VERSION" >> $GITHUB_OUTPUT
-          else
-            echo "Tag v${{ steps.version_bump.outputs.version }} does not exist"
-            echo "final_version=${{ steps.version_bump.outputs.version }}" >> $GITHUB_OUTPUT
-          fi
+                    echo "final_version=$UNIQUE_VERSION" >> $GITHUB_OUTPUT
+                  else
+                    echo "Tag v${{ steps.version_bump.outputs.version }} does not exist"
+                    echo "final_version=${{ steps.version_bump.outputs.version }}" >> $GITHUB_OUTPUT
+                  fi
 
-      # STEP 4: Set final version - from either manual bump or existing version
-      - name: Set final version
-        id: final_version
-        run: |
-          if [ "${{ github.event_name }}" == "workflow_dispatch" ] && [ "${{ !inputs.skip_version_bump }}" == "true" ]; then
-            echo "final_version=${{ steps.check_tag.outputs.final_version }}" >> $GITHUB_OUTPUT
-            echo "Final version (after bump): ${{ steps.check_tag.outputs.final_version }}"
-          else
-            echo "final_version=${{ steps.current_version.outputs.version }}" >> $GITHUB_OUTPUT
-            echo "Final version (current): ${{ steps.current_version.outputs.version }}"
-          fi
+            # STEP 4: Set final version - from either manual bump or existing version
+            - name: Set final version
+              id: final_version
+              run: |
+                  if [ "${{ github.event_name }}" == "workflow_dispatch" ] && [ "${{ !inputs.skip_version_bump }}" == "true" ]; then
+                    echo "final_version=${{ steps.check_tag.outputs.final_version }}" >> $GITHUB_OUTPUT
+                    echo "Final version (after bump): ${{ steps.check_tag.outputs.final_version }}"
+                  else
+                    echo "final_version=${{ steps.current_version.outputs.version }}" >> $GITHUB_OUTPUT
+                    echo "Final version (current): ${{ steps.current_version.outputs.version }}"
+                  fi
 
-      # STEP 5: Commit version bump for manual workflow
-      - name: Commit version bump
-        if: github.event_name == 'workflow_dispatch' && !inputs.skip_version_bump
-        run: |
-          git add package.json
-          git commit -m "Bump version to ${{ steps.final_version.outputs.final_version }}"
-          git push origin main
+            # STEP 5: Commit version bump for manual workflow
+            - name: Commit version bump
+              if: github.event_name == 'workflow_dispatch' && !inputs.skip_version_bump
+              run: |
+                  git add package.json
+                  git commit -m "Bump version to ${{ steps.final_version.outputs.final_version }}"
+                  git push origin main
 
-      # STEP 6: Check version against npm registry
-      - name: Check for version changes against npm
-        id: check_version
-        run: |
-          # Get remote version from npm registry
-          REMOTE_VERSION=$(npm view create-rainbow-app version 2>/dev/null || echo "0.0.0")
+            # STEP 6: Check version against npm registry
+            - name: Check for version changes against npm
+              id: check_version
+              run: |
+                  # Get remote version from npm registry
+                  REMOTE_VERSION=$(npm view create-rainbow-app version 2>/dev/null || echo "0.0.0")
 
-          # Final version to publish
-          LOCAL_VERSION="${{ steps.final_version.outputs.final_version }}"
+                  # Final version to publish
+                  LOCAL_VERSION="${{ steps.final_version.outputs.final_version }}"
 
-          echo "Remote version on npm: $REMOTE_VERSION"
-          echo "Local version to publish: $LOCAL_VERSION"
+                  echo "Remote version on npm: $REMOTE_VERSION"
+                  echo "Local version to publish: $LOCAL_VERSION"
 
-          if [ "$REMOTE_VERSION" != "$LOCAL_VERSION" ]; then
-            echo "Version has changed, will publish"
-            echo "version_changed=true" >> $GITHUB_OUTPUT
-          else
-            echo "Version unchanged, will skip unless manually triggered"
-            echo "version_changed=false" >> $GITHUB_OUTPUT
-          fi
+                  if [ "$REMOTE_VERSION" != "$LOCAL_VERSION" ]; then
+                    echo "Version has changed, will publish"
+                    echo "version_changed=true" >> $GITHUB_OUTPUT
+                  else
+                    echo "Version unchanged, will skip unless manually triggered"
+                    echo "version_changed=false" >> $GITHUB_OUTPUT
+                  fi
 
-      # STEP 7: Create Git Tag for new versions
-      - name: Create Git Tag
-        if: github.event_name == 'workflow_dispatch' && !inputs.skip_version_bump
-        run: |
-          # Create and push the tag with force to ensure it's created/updated
-          git tag -f v${{ steps.final_version.outputs.final_version }}
-          git push origin v${{ steps.final_version.outputs.final_version }} --force
-          echo "Created tag: v${{ steps.final_version.outputs.final_version }}"
+            # STEP 7: Create Git Tag for new versions
+            - name: Create Git Tag
+              if: github.event_name == 'workflow_dispatch' && !inputs.skip_version_bump
+              run: |
+                  # Create and push the tag with force to ensure it's created/updated
+                  git tag -f v${{ steps.final_version.outputs.final_version }}
+                  git push origin v${{ steps.final_version.outputs.final_version }} --force
+                  echo "Created tag: v${{ steps.final_version.outputs.final_version }}"
 
-      # STEP 8: Create GitHub Release for manual workflow
-      - name: Create GitHub Release
-        id: create_release
-        if: github.event_name == 'workflow_dispatch' && !inputs.skip_version_bump
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: v${{ steps.final_version.outputs.final_version }}
-          release_name: Release v${{ steps.final_version.outputs.final_version }}
-          body: |
-            # Version ${{ steps.final_version.outputs.final_version }}
+            # STEP 8: Get tag information for tag push events
+            - name: Get Tag Info
+              id: tag_info
+              if: startsWith(github.ref, 'refs/tags/v')
+              run: |
+                  # Extract tag name from ref
+                  TAG_NAME=${GITHUB_REF#refs/tags/}
+                  echo "tag_name=$TAG_NAME" >> $GITHUB_OUTPUT
 
-            ${{ inputs.release_notes || 'No release notes provided.' }}
+                  # Extract version from tag (remove v prefix)
+                  VERSION=${TAG_NAME#v}
+                  echo "version=$VERSION" >> $GITHUB_OUTPUT
+                  echo "Detected tag: $TAG_NAME with version: $VERSION"
 
-            ## How to Install
+            # STEP 9: Create GitHub Release for manual workflow or tag push
+            - name: Create GitHub Release (Manual Workflow)
+              id: create_release_manual
+              if: github.event_name == 'workflow_dispatch' && !inputs.skip_version_bump
+              uses: actions/create-release@v1
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              with:
+                  tag_name: v${{ steps.final_version.outputs.final_version }}
+                  release_name: Release v${{ steps.final_version.outputs.final_version }}
+                  body: |
+                      # Version ${{ steps.final_version.outputs.final_version }}
 
-            ```bash
-            # Using npm
-            npm install create-rainbow-app
+                      ${{ inputs.release_notes || 'No release notes provided.' }}
 
-            # Using yarn
-            yarn add create-rainbow-app
+                      ## How to Install
 
-            # Using bun
-            bun add create-rainbow-app
-            ```
-          draft: false
-          prerelease: false
+                      ```bash
+                      # Using npm
+                      npm install create-rainbow-app
 
-      # STEP 9: Publish to npm
-      - name: Publish to npm Registry
-        if: steps.check_version.outputs.version_changed == 'true' || github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v')
-        run: |
-          echo "Publishing version ${{ steps.final_version.outputs.final_version }} to npm registry"
-          npm publish
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+                      # Using yarn
+                      yarn add create-rainbow-app
 
-      # STEP 10: Verify publication
-      - name: Verify Publication
-        if: steps.check_version.outputs.version_changed == 'true' || github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v')
-        run: |
-          echo "Verifying publication to npm..."
-          sleep 10  # Give npm registry some time to update
-          NEW_PUBLISHED_VERSION=$(npm view create-rainbow-app version 2>/dev/null || echo "Failed to fetch")
-          echo "Newly published version: $NEW_PUBLISHED_VERSION"
+                      # Using bun
+                      bun add create-rainbow-app
+                      ```
+                  draft: false
+                  prerelease: false
 
-          if [ "$NEW_PUBLISHED_VERSION" == "${{ steps.final_version.outputs.final_version }}" ]; then
-            echo "✅ Publication successful! Version matches: $NEW_PUBLISHED_VERSION"
-          else
-            echo "⚠️ Publication may have succeeded, but version doesn't match immediately."
-            echo "This is normal as npm registry may take time to update."
-          fi
+            # Create GitHub Release for tag push events
+            - name: Create GitHub Release (Tag Push)
+              id: create_release_tag
+              if: startsWith(github.ref, 'refs/tags/v')
+              uses: actions/create-release@v1
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              with:
+                  tag_name: ${{ steps.tag_info.outputs.tag_name }}
+                  release_name: Release ${{ steps.tag_info.outputs.tag_name }}
+                  body: |
+                      # Version ${{ steps.tag_info.outputs.version }}
+
+                      This release was automatically created from a tag push.
+
+                      ## How to Install
+
+                      ```bash
+                      # Using npm
+                      npm install create-rainbow-app
+
+                      # Using yarn
+                      yarn add create-rainbow-app
+
+                      # Using bun
+                      bun add create-rainbow-app
+                      ```
+                  draft: false
+                  prerelease: false
+
+            # STEP 10: Publish to npm
+            - name: Publish to npm Registry
+              if: steps.check_version.outputs.version_changed == 'true' || github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v')
+              run: |
+                  # Determine which version to publish based on the event type
+                  if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+                    PUBLISH_VERSION="${{ steps.tag_info.outputs.version }}"
+                  else
+                    PUBLISH_VERSION="${{ steps.final_version.outputs.final_version }}"
+                  fi
+
+                  echo "Publishing version $PUBLISH_VERSION to npm registry"
+                  npm publish
+              env:
+                  NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+            # STEP 11: Verify publication
+            - name: Verify Publication
+              if: steps.check_version.outputs.version_changed == 'true' || github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v')
+              run: |
+                  echo "Verifying publication to npm..."
+                  sleep 10  # Give npm registry some time to update
+                  NEW_PUBLISHED_VERSION=$(npm view create-rainbow-app version 2>/dev/null || echo "Failed to fetch")
+                  echo "Newly published version: $NEW_PUBLISHED_VERSION"
+
+                  # Determine expected version based on event type
+                  if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+                    EXPECTED_VERSION="${{ steps.tag_info.outputs.version }}"
+                  else
+                    EXPECTED_VERSION="${{ steps.final_version.outputs.final_version }}"
+                  fi
+
+                  if [ "$NEW_PUBLISHED_VERSION" == "$EXPECTED_VERSION" ]; then
+                    echo "✅ Publication successful! Version matches: $NEW_PUBLISHED_VERSION"
+                  else
+                    echo "⚠️ Publication may have succeeded, but version doesn't match immediately."
+                    echo "This is normal as npm registry may take time to update."
+                    echo "Expected: $EXPECTED_VERSION, Got: $NEW_PUBLISHED_VERSION"
+                  fi

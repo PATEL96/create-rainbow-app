@@ -1,6 +1,6 @@
 # GitHub Workflows for create-rainbow-app
 
-This directory contains GitHub Actions workflows that automate the release and publishing processes for the `create-rainbow-app` package to the npm registry.
+This directory contains GitHub Actions workflows that automate the release and publishing processes for the `create-rainbow-app` package to the npm registry. The workflow automatically creates GitHub Releases for any tags you push.
 
 ## Available Workflow
 
@@ -11,7 +11,7 @@ This is a comprehensive workflow that handles both automatic and manual publishi
 **Automatic Publishing Triggers:**
 
 - When you push to the main branch (if version has changed)
-- When you create a new tag (v\*)
+- When you create a new tag (v\*) - also creates a GitHub Release automatically
 
 **Manual Publishing Options:**
 
@@ -26,14 +26,18 @@ This is a comprehensive workflow that handles both automatic and manual publishi
 Simply push changes to the main branch after updating the version in package.json:
 
 ```bash
-# Update version in package.json (edit manually or use npm version)
+# Update version in package.json and create a tag
 npm version patch  # Updates version and creates a git tag
 
-# Push changes to GitHub
+# Push changes and tags to GitHub
 git push origin main --tags
 ```
 
-The workflow will detect the version change and publish automatically.
+The workflow will:
+
+1. Detect the tag push event
+2. Automatically create a GitHub Release for the tag
+3. Publish the version to npm
 
 ### Manual Publishing with Version Bump
 
@@ -93,6 +97,7 @@ If the workflow fails:
 3. Verify that your npm token is valid and has publish permissions
 4. Check if the version in package.json already exists on npm
 5. Ensure you have write permissions to the repository
+6. For tag-based releases, make sure your tag names start with 'v' followed by the version number (e.g., v1.2.3)
 
 ## Manual Publishing
 
@@ -102,3 +107,23 @@ If you need to publish manually:
 npm login
 npm publish
 ```
+
+## Tag-Based Publishing
+
+The recommended workflow is to use npm's version command which creates both the version update and the git tag:
+
+```bash
+# Create a new patch version (1.0.0 -> 1.0.1)
+npm version patch
+
+# Create a new minor version (1.0.0 -> 1.1.0)
+npm version minor
+
+# Create a new major version (1.0.0 -> 2.0.0)
+npm version major
+
+# Push the new version and tag to GitHub
+git push origin main --tags
+```
+
+The workflow will automatically create a GitHub Release and publish to npm when it detects the new tag.
