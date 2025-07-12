@@ -1,4 +1,4 @@
-name: Publish and Release to npm
+name: Publish to npm
 
 on:
     # Automatic triggers
@@ -17,10 +17,6 @@ on:
                     - patch
                     - minor
                     - major
-            release_notes:
-                description: "Release notes"
-                required: false
-                type: string
             skip_version_bump:
                 description: "Skip version bump (use current version)"
                 required: false
@@ -185,65 +181,7 @@ jobs:
                   echo "version=$VERSION" >> $GITHUB_OUTPUT
                   echo "Detected tag: $TAG_NAME with version: $VERSION"
 
-            # STEP 9: Create GitHub Release for manual workflow or tag push
-            - name: Create GitHub Release (Manual Workflow)
-              id: create_release_manual
-              if: github.event_name == 'workflow_dispatch' && !inputs.skip_version_bump
-              uses: actions/create-release@v1
-              env:
-                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-              with:
-                  tag_name: v${{ steps.final_version.outputs.final_version }}
-                  release_name: Release v${{ steps.final_version.outputs.final_version }}
-                  body: |
-                      # Version ${{ steps.final_version.outputs.final_version }}
-
-                      ${{ inputs.release_notes || 'No release notes provided.' }}
-
-                      ## How to Install
-
-                      ```bash
-                      # Using npm
-                      npm install create-rainbow-app
-
-                      # Using yarn
-                      yarn add create-rainbow-app
-
-                      # Using bun
-                      bun add create-rainbow-app
-                      ```
-                  draft: false
-                  prerelease: false
-
-            # Create GitHub Release for tag push events
-            - name: Create GitHub Release (Tag Push)
-              id: create_release_tag
-              if: startsWith(github.ref, 'refs/tags/v')
-              uses: actions/create-release@v1
-              env:
-                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-              with:
-                  tag_name: ${{ steps.tag_info.outputs.tag_name }}
-                  release_name: Release ${{ steps.tag_info.outputs.tag_name }}
-                  body: |
-                      # Version ${{ steps.tag_info.outputs.version }}
-
-                      This release was automatically created from a tag push.
-
-                      ## How to Install
-
-                      ```bash
-                      # Using npm
-                      npm install create-rainbow-app
-
-                      # Using yarn
-                      yarn add create-rainbow-app
-
-                      # Using bun
-                      bun add create-rainbow-app
-                      ```
-                  draft: false
-                  prerelease: false
+            # STEP 9: Release steps removed - only publishing to npm and GitHub Packages
 
             # STEP 10: Publish to npm Registry
             - name: Publish to npm Registry
