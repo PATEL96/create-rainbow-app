@@ -1,6 +1,6 @@
 # GitHub Workflows for create-rainbow-app
 
-This directory contains GitHub Actions workflows that automate the release and publishing processes for the `create-rainbow-app` package to the npm registry. The workflow automatically creates GitHub Releases for any tags you push.
+This directory contains GitHub Actions workflows that automate the release and publishing processes for the `create-rainbow-app` package to both npm registry and GitHub Packages. The workflow automatically creates GitHub Releases for any tags you push.
 
 ## Available Workflow
 
@@ -18,6 +18,11 @@ This is a comprehensive workflow that handles both automatic and manual publishi
 - Choose a version bump type (patch, minor, major)
 - Add release notes
 - Option to skip version bumping
+
+**Publishing Destinations:**
+
+- npm Registry (as `create-rainbow-app`)
+- GitHub Packages (as `@patel96/create-rainbow-app`)
 
 ## How to Use the Workflow
 
@@ -37,7 +42,7 @@ The workflow will:
 
 1. Detect the tag push event
 2. Automatically create a GitHub Release for the tag
-3. Publish the version to npm
+3. Publish the version to both npm registry and GitHub Packages
 
 ### Manual Publishing with Version Bump
 
@@ -56,8 +61,8 @@ This will:
 - Bump the version according to your selection
 - Find a unique version if the tag already exists
 - Create a commit, tag and GitHub release
-- Publish to npm
-- Verify the publication
+- Publish to both npm registry and GitHub Packages
+- Verify the publications
 
 ### Manual Publishing without Version Bump
 
@@ -75,18 +80,20 @@ This will publish the current version in package.json to npm.
 
 ## Authentication
 
-This workflow requires an npm access token:
+This workflow requires the following:
 
-1. Create an npm access token:
+1. An npm access token:
     - Log in to npmjs.org
     - Click on your profile icon → Access Tokens
     - Generate a new token (type: Automation)
     - Copy the token immediately
+    - Add to GitHub repository secrets as `NPM_TOKEN`
 
-2. Add the token to GitHub repository secrets:
-    - Go to your repository → Settings → Secrets and variables → Actions
-    - Add a new secret named `NPM_TOKEN`
-    - Paste your npm token as the value
+2. GitHub Token (automatic):
+    - The workflow uses the built-in `GITHUB_TOKEN` for GitHub Packages
+    - Ensure repository permissions allow GitHub Actions to write packages
+    - Go to repository → Settings → Actions → General → Workflow permissions
+    - Select "Read and write permissions"
 
 ## Troubleshooting
 
@@ -103,9 +110,27 @@ If the workflow fails:
 
 If you need to publish manually:
 
+### To npm Registry:
+
 ```bash
 npm login
 npm publish
+```
+
+### To GitHub Packages:
+
+```bash
+# Setup authentication
+echo "//npm.pkg.github.com/:_authToken=YOUR_GITHUB_TOKEN" > .npmrc
+echo "@patel96:registry=https://npm.pkg.github.com" >> .npmrc
+
+# Temporarily modify package.json
+# Change "name" to "@patel96/create-rainbow-app"
+
+# Publish
+npm publish
+
+# Restore original package.json
 ```
 
 ## Tag-Based Publishing
@@ -126,4 +151,4 @@ npm version major
 git push origin main --tags
 ```
 
-The workflow will automatically create a GitHub Release and publish to npm when it detects the new tag.
+The workflow will automatically create a GitHub Release and publish to both npm registry and GitHub Packages when it detects the new tag.

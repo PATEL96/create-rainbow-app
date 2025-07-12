@@ -48,7 +48,7 @@ jobs:
                   git config --global user.name "GitHub Actions"
                   git config --global user.email "actions@github.com"
 
-            - name: Setup Node.js
+            - name: Setup Node.js for npm
               uses: actions/setup-node@v3
               with:
                   node-version: "18"
@@ -246,7 +246,7 @@ jobs:
                   draft: false
                   prerelease: false
 
-            # STEP 10: Publish to npm
+            # STEP 10: Publish to npm Registry
             - name: Publish to npm Registry
               if: steps.check_version.outputs.version_changed == 'true' || github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v')
               run: |
@@ -262,6 +262,48 @@ jobs:
               env:
                   NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
+            # STEP 10.5: Setup Node.js for GitHub Packages
+            - name: Setup Node.js for GitHub Packages
+              uses: actions/setup-node@v3
+              with:
+                  node-version: "18"
+                  registry-url: "https://npm.pkg.github.com"
+                  scope: "@patel96"
+
+            # STEP 10.6: Prepare and Publish to GitHub Packages
+            - name: Publish to GitHub Packages
+              if: steps.check_version.outputs.version_changed == 'true' || github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v')
+              run: |
+                  # Determine which version to publish based on the event type
+                  if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+                    PUBLISH_VERSION="${{ steps.tag_info.outputs.version }}"
+                  else
+                    PUBLISH_VERSION="${{ steps.final_version.outputs.final_version }}"
+                  fi
+
+                  # Create temporary package.json for GitHub Packages
+                  cp package.json package.json.npm
+
+                  # Update package.json for GitHub Packages
+                  node -e "
+                    const fs = require('fs');
+                    const pkg = JSON.parse(fs.readFileSync('./package.json', 'utf8'));
+                    pkg.name = '@patel96/create-rainbow-app';
+                    pkg.publishConfig = { registry: 'https://npm.pkg.github.com/' };
+                    fs.writeFileSync('./package.json', JSON.stringify(pkg, null, 2));
+                  "
+
+                  echo "Modified package.json for GitHub Packages:"
+                  cat package.json
+
+                  echo "Publishing version $PUBLISH_VERSION to GitHub Packages"
+                  npm publish
+
+                  # Restore original package.json
+                  mv package.json.npm package.json
+              env:
+                  NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
             # STEP 11: Verify publication
             - name: Verify Publication
               if: steps.check_version.outputs.version_changed == 'true' || github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v')
@@ -269,7 +311,7 @@ jobs:
                   echo "Verifying publication to npm..."
                   sleep 10  # Give npm registry some time to update
                   NEW_PUBLISHED_VERSION=$(npm view create-rainbow-app version 2>/dev/null || echo "Failed to fetch")
-                  echo "Newly published version: $NEW_PUBLISHED_VERSION"
+                  echo "Newly published version on npm: $NEW_PUBLISHED_VERSION"
 
                   # Determine expected version based on event type
                   if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
@@ -279,9 +321,25 @@ jobs:
                   fi
 
                   if [ "$NEW_PUBLISHED_VERSION" == "$EXPECTED_VERSION" ]; then
-                    echo "✅ Publication successful! Version matches: $NEW_PUBLISHED_VERSION"
+                    echo "✅ npm publication successful! Version matches: $NEW_PUBLISHED_VERSION"
                   else
-                    echo "⚠️ Publication may have succeeded, but version doesn't match immediately."
+                    echo "⚠️ npm publication may have succeeded, but version doesn't match immediately."
                     echo "This is normal as npm registry may take time to update."
                     echo "Expected: $EXPECTED_VERSION, Got: $NEW_PUBLISHED_VERSION"
+                  fi
+
+                  # Setup for GitHub Packages version check
+                  echo "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}" > .npmrc
+                  echo "@patel96:registry=https://npm.pkg.github.com" >> .npmrc
+
+                  echo "Verifying publication to GitHub Packages..."
+                  GITHUB_PUBLISHED_VERSION=$(npm view @patel96/create-rainbow-app version 2>/dev/null || echo "Failed to fetch")
+                  echo "Newly published version on GitHub Packages: $GITHUB_PUBLISHED_VERSION"
+
+                  if [ "$GITHUB_PUBLISHED_VERSION" == "$EXPECTED_VERSION" ]; then
+                    echo "✅ GitHub Packages publication successful! Version matches: $GITHUB_PUBLISHED_VERSION"
+                  else
+                    echo "⚠️ GitHub Packages publication may have succeeded, but version doesn't match immediately."
+                    echo "This is normal as GitHub Packages may take time to update."
+                    echo "Expected: $EXPECTED_VERSION, Got: $GITHUB_PUBLISHED_VERSION"
                   fi
