@@ -48,7 +48,9 @@ jobs:
 
             - name: Get current version
               id: current_version
-              run: echo "version=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
+              run: |
+                  echo "version=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
+                  echo "Current version: $(node -p "require('./package.json').version")"
 
             - name: Bump version
               id: bump_version
@@ -83,6 +85,6 @@ jobs:
                   git push --tags
 
             - name: Publish to GitHub Packages
-              run: npm publish
+              run: npm publish --access public
               env:
                   NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
