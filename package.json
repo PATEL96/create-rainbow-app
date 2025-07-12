@@ -1,6 +1,6 @@
 {
     "name": "@patel96/create-rainbow-app",
-    "version": "4.1.4",
+    "version": "4.1.5",
     "main": "index.js",
     "license": "MIT",
     "publishConfig": {
