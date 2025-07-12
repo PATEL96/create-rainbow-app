@@ -111,7 +111,7 @@ jobs:
               run: |
                   git add package.json
                   git commit -m "Bump version to ${{ steps.check_tag.outputs.final_version }}"
-                  git push
+                  git push origin main
 
             - name: Create Git Tag
               run: |

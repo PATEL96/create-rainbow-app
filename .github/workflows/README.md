@@ -2,43 +2,76 @@
 
 This directory contains GitHub Actions workflows that automate the release and publishing processes for the `create-rainbow-app` package to the npm registry.
 
-## Available Workflows
+## Available Workflow
 
-### 1. npm-publish.yml
+### npm-publish-and-release.yml
 
-This workflow automatically publishes the package to npm when:
+This is a comprehensive workflow that handles both automatic and manual publishing to npm:
 
-- A new version is pushed to the main branch
-- A new version tag (v\*) is created
-- The workflow is manually triggered
+**Automatic Publishing Triggers:**
 
-**Features:**
+- When you push to the main branch (if version has changed)
+- When you create a new tag (v\*)
 
-- Automatically checks if the local version differs from the published version
-- Only publishes when the version has changed or when explicitly triggered
-- Uses npm token for authentication
+**Manual Publishing Options:**
 
-### 2. release.yml
+- Choose a version bump type (patch, minor, major)
+- Add release notes
+- Option to skip version bumping
 
-This workflow helps with creating new releases by:
+## How to Use the Workflow
 
-- Bumping the version number (patch, minor, or major)
-- Creating a Git tag
-- Creating a GitHub Release
-- Publishing the new version to npm
+### Automatic Publishing
 
-**How to use:**
+Simply push changes to the main branch after updating the version in package.json:
 
-1. Go to the "Actions" tab in your repository
-2. Select "Create Release and Publish to npm" workflow
-3. Click "Run workflow"
-4. Choose the version bump type (patch, minor, major)
-5. Optionally add release notes
-6. Click "Run workflow" to execute
+```bash
+# Update version in package.json (edit manually or use npm version)
+npm version patch  # Updates version and creates a git tag
+
+# Push changes to GitHub
+git push origin main --tags
+```
+
+The workflow will detect the version change and publish automatically.
+
+### Manual Publishing with Version Bump
+
+1. Go to your GitHub repository
+2. Click on the "Actions" tab
+3. Select "Publish and Release to npm" workflow
+4. Click "Run workflow"
+5. Configure the workflow run:
+    - Choose version bump type: patch, minor, or major
+    - Add release notes (optional)
+    - Leave "Skip version bump" unchecked
+6. Click "Run workflow"
+
+This will:
+
+- Bump the version according to your selection
+- Find a unique version if the tag already exists
+- Create a commit, tag and GitHub release
+- Publish to npm
+- Verify the publication
+
+### Manual Publishing without Version Bump
+
+If you've already updated the version manually:
+
+1. Go to your GitHub repository
+2. Click on the "Actions" tab
+3. Select "Publish and Release to npm" workflow
+4. Click "Run workflow"
+5. Configure the workflow run:
+    - Check "Skip version bump"
+6. Click "Run workflow"
+
+This will publish the current version in package.json to npm.
 
 ## Authentication
 
-These workflows use an npm access token that you need to add as a repository secret:
+This workflow requires an npm access token:
 
 1. Create an npm access token:
     - Log in to npmjs.org
@@ -51,22 +84,15 @@ These workflows use an npm access token that you need to add as a repository sec
     - Add a new secret named `NPM_TOKEN`
     - Paste your npm token as the value
 
-## Custom Configuration
-
-To modify the publishing behavior:
-
-- Edit the `publishConfig` in your `package.json` file if needed
-- Update the registry URL in the workflow files
-- Change the Node.js version if needed
-
 ## Troubleshooting
 
-If the workflows fail:
+If the workflow fails:
 
 1. Check the workflow logs for detailed error messages
-2. Ensure your `package.json` has the correct configuration
-3. Verify you have the necessary permissions in the repository
-4. Check that your npm token is valid and has the correct permissions
+2. Ensure your package.json has the correct configuration
+3. Verify that your npm token is valid and has publish permissions
+4. Check if the version in package.json already exists on npm
+5. Ensure you have write permissions to the repository
 
 ## Manual Publishing
 
