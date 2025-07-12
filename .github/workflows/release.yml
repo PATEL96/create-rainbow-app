@@ -1,4 +1,4 @@
-name: Create Release and Publish to npm
+name: Create Release and Publish to npm and GitHub Packages
 
 on:
     workflow_dispatch:
@@ -23,7 +23,6 @@ jobs:
         permissions:
             contents: write
             packages: write
-            actions: write
 
         steps:
             - name: Checkout repository
@@ -88,3 +87,31 @@ jobs:
               run: npm publish
               env:
                   NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+            - name: Setup Node.js for GitHub Packages
+              uses: actions/setup-node@v3
+              with:
+                  node-version: "18"
+                  registry-url: "https://npm.pkg.github.com"
+                  scope: "@patel96"
+
+            - name: Prepare package for GitHub Packages
+              run: |
+                  # Create a temporary package.json for GitHub Packages
+                  cp package.json package.json.tmp
+                  # Update package name for GitHub Packages
+                  node -e "const pkg = require('./package.json'); pkg.name = '@patel96/create-rainbow-app'; require('fs').writeFileSync('package.json', JSON.stringify(pkg, null, 2));"
+                  # Set up authentication for GitHub Packages
+                  echo "//npm.pkg.github.com/:_authToken=${GITHUB_TOKEN}" > .npmrc
+                  echo "@patel96:registry=https://npm.pkg.github.com" >> .npmrc
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+            - name: Publish to GitHub Packages
+              run: npm publish --access public
+              env:
+                  NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+            - name: Restore original package.json
+              run: mv package.json.tmp package.json
+              if: always()

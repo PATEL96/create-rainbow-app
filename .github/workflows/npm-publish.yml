@@ -1,4 +1,4 @@
-name: Publish Package to npm
+name: Publish Package to npm and GitHub Packages
 
 on:
     push:
@@ -7,7 +7,7 @@ on:
     workflow_dispatch:
 
 jobs:
-    publish:
+    publish-npm:
         runs-on: ubuntu-latest
         permissions:
             contents: read
@@ -18,7 +18,7 @@ jobs:
             - name: Checkout repository
               uses: actions/checkout@v3
 
-            - name: Setup Node.js
+            - name: Setup Node.js for npm Registry
               uses: actions/setup-node@v3
               with:
                   node-version: "18"
@@ -27,13 +27,13 @@ jobs:
             - name: Install dependencies
               run: npm ci || npm install
 
-            - name: Check for version changes
-              id: check_version
+            - name: Check for version changes on npm
+              id: check_version_npm
               run: |
                   # Get versions and compare
                   REMOTE_VERSION=$(npm view create-rainbow-app version 2>/dev/null || echo "0.0.0")
                   LOCAL_VERSION=$(node -p "require('./package.json').version")
-                  echo "Remote version: $REMOTE_VERSION"
+                  echo "Remote version on npm: $REMOTE_VERSION"
                   echo "Local version: $LOCAL_VERSION"
                   if [ "$REMOTE_VERSION" != "$LOCAL_VERSION" ]; then
                     echo "version_changed=true" >> $GITHUB_OUTPUT
@@ -42,7 +42,64 @@ jobs:
                   fi
 
             - name: Publish to npm Registry
-              if: steps.check_version.outputs.version_changed == 'true' || github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v')
+              if: steps.check_version_npm.outputs.version_changed == 'true' || github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v')
               run: npm publish
               env:
                   NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+    publish-github:
+        runs-on: ubuntu-latest
+        needs: publish-npm # Run after npm publishing succeeds
+        permissions:
+            contents: read
+            packages: write
+
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@v3
+
+            - name: Setup Node.js for GitHub Packages
+              uses: actions/setup-node@v3
+              with:
+                  node-version: "18"
+                  registry-url: "https://npm.pkg.github.com"
+                  scope: "@patel96"
+
+            - name: Install dependencies
+              run: npm ci || npm install
+
+            - name: Prepare package for GitHub Packages
+              run: |
+                  # Create a temporary package.json for GitHub Packages
+                  cp package.json package.json.tmp
+                  # Update package name for GitHub Packages
+                  node -e "const pkg = require('./package.json.tmp'); pkg.name = '@patel96/create-rainbow-app'; require('fs').writeFileSync('package.json', JSON.stringify(pkg, null, 2));"
+                  # Set up authentication for GitHub Packages
+                  echo "//npm.pkg.github.com/:_authToken=${NODE_AUTH_TOKEN}" > .npmrc
+                  echo "@patel96:registry=https://npm.pkg.github.com" >> .npmrc
+
+            - name: Check for version changes on GitHub Packages
+              id: check_version_github
+              run: |
+                  # Get versions and compare
+                  REMOTE_VERSION=$(npm view @patel96/create-rainbow-app version 2>/dev/null || echo "0.0.0")
+                  LOCAL_VERSION=$(node -p "require('./package.json').version")
+                  echo "Remote version on GitHub: $REMOTE_VERSION"
+                  echo "Local version: $LOCAL_VERSION"
+                  if [ "$REMOTE_VERSION" != "$LOCAL_VERSION" ]; then
+                    echo "version_changed=true" >> $GITHUB_OUTPUT
+                  else
+                    echo "version_changed=false" >> $GITHUB_OUTPUT
+                  fi
+              env:
+                  NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+            - name: Publish to GitHub Packages
+              if: steps.check_version_github.outputs.version_changed == 'true' || github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v')
+              run: npm publish --access public
+              env:
+                  NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+            - name: Restore original package.json
+              run: mv package.json.tmp package.json
+              if: always()
