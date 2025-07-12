@@ -55,7 +55,7 @@ const path = require("path");
 function displayWelcomeBanner(chalk) {
     console.clear();
     console.log(
-        chalk.cyan.bold(`
+        chalk.orange.bold(`
      ██╗    ██╗███████╗██████╗ ██████╗     ██████╗  █████╗ ██████╗ ██████╗
      ██║    ██║██╔════╝██╔══██╗╚════██╗    ██╔══██╗██╔══██╗██╔══██╗██╔══██╗
      ██║ █╗ ██║█████╗  ██████╔╝ █████╔╝    ██║  ██║███████║██████╔╝██████╔╝
