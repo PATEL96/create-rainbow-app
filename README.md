@@ -1,7 +1,8 @@
 # create-rainbow-app
 
 ![Static Badge](https://img.shields.io/badge/Terminal-CLI-red?style=for-the-badge&logo=console)
-![NPM Version](https://img.shields.io/npm/v/create-rainbow-app?style=for-the-badge)
+![NPM Version](https://img.shields.io/npm/v/create-rainbow-app?style=for-the-badge&logo=npm)
+![GitHub Package Version](https://img.shields.io/github/package-json/v/PATEL96/create-rainbow-app?label=GitHub%20Package&style=for-the-badge&logo=github)
 
 Easily bootstrap your **RainbowKit**-based project with a single command!
 Supports **`Bun`** and **`Yarn`** for dependency management. 🚀
@@ -18,9 +19,9 @@ Supports **`Bun`** and **`Yarn`** for dependency management. 🚀
 
 ## Usage
 
-You can use this CLI tool with **bun** or **npx**:
+You can use this CLI tool with **bun**, **npx**, or other package managers:
 
-### From npm registry (recommended)
+### From npm Registry (recommended)
 
 #### Bun
 
@@ -33,3 +34,45 @@ bun create rainbow-app@latest <project-name>
 ```bash
 npx create-rainbow-app@latest <project-name>
 ```
+
+#### Yarn
+
+```bash
+yarn create rainbow-app <project-name>
+```
+
+### From GitHub Packages
+
+This package is also available on GitHub Packages:
+
+```bash
+# Configure npm to use GitHub Packages for the @patel96 scope
+npm config set @patel96:registry https://npm.pkg.github.com
+
+# Install using npx
+npx @patel96/create-rainbow-app <project-name>
+```
+
+## Installation
+
+If you want to install the package globally:
+
+### From npm Registry
+
+```bash
+npm install -g create-rainbow-app
+```
+
+### From GitHub Packages
+
+```bash
+npm install -g @patel96/create-rainbow-app
+```
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Author
+
+[PATEL96](https://github.com/PATEL96)
