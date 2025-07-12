@@ -1,8 +1,7 @@
 # create-rainbow-app
 
 ![Static Badge](https://img.shields.io/badge/Terminal-CLI-red?style=for-the-badge&logo=console)
-![NPM Version](https://img.shields.io/npm/v/create-rainbow-app?style=for-the-badge&logo=npm)
-![GitHub Package Version](https://img.shields.io/github/package-json/v/PATEL96/create-rainbow-app?label=GitHub%20Package&style=for-the-badge&logo=github)
+![LICENSE](https://img.shields.io/npm/l/create-rainbow-app?style=for-the-badge&logo=license)
 
 Easily bootstrap your **RainbowKit**-based project with a single command!
 Supports **`Bun`** and **`Yarn`** for dependency management. 🚀
