@@ -1,173 +1,96 @@
-name: Create Release and Publish to npm and GitHub Packages
+name: Create Release and Publish to npm
 
 on:
-    workflow_dispatch:
-        inputs:
-            version_type:
-                description: "Version bump type"
-                required: true
-                default: "patch"
-                type: choice
-                options:
-                    - patch
-                    - minor
-                    - major
-            release_notes:
-                description: "Release notes"
-                required: false
-                type: string
+  workflow_dispatch:
+    inputs:
+      version_type:
+        description: 'Version bump type'
+        required: true
+        default: 'patch'
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+      release_notes:
+        description: 'Release notes'
+        required: false
+        type: string
 
 jobs:
-    release:
-        runs-on: ubuntu-latest
-        permissions:
-            contents: write
-            packages: write
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
 
-        steps:
-            - name: Checkout repository
-              uses: actions/checkout@v3
-              with:
-                  fetch-depth: 0
-                  token: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
 
-            - name: Setup Git User
-              run: |
-                  git config --global user.name "GitHub Actions"
-                  git config --global user.email "actions@github.com"
+      - name: Setup Git User
+        run: |
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
 
-            - name: Setup Node.js
-              uses: actions/setup-node@v3
-              with:
-                  node-version: "18"
-                  registry-url: "https://registry.npmjs.org"
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          registry-url: 'https://registry.npmjs.org/'
 
-            - name: Install dependencies
-              run: npm ci || npm install
+      - name: Install dependencies
+        run: npm ci || npm install
 
-            - name: Get current version
-              id: current_version
-              run: |
-                  # Display package.json for debugging
-                  echo "Current package.json content:"
-                  cat package.json
+      - name: Get current version
+        id: current_version
+        run: |
+          # Display current version
+          CURRENT_VERSION=$(node -e "console.log(require('./package.json').version);")
+          echo "version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+          echo "Current version: $CURRENT_VERSION"
 
-                  # Get version with error handling
-                  CURRENT_VERSION=$(node -e "try { const fs = require('fs'); const pkg = JSON.parse(fs.readFileSync('./package.json', 'utf8')); console.log(pkg.version); } catch (err) { console.error('Error reading package.json:', err); process.exit(1); }")
-                  echo "version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
-                  echo "Current version: $CURRENT_VERSION"
+      - name: Bump version
+        id: bump_version
+        run: |
+          # Bump version using npm version command
+          npm version ${{ github.event.inputs.version_type }} --no-git-tag-version
 
-            - name: Bump version
-              id: bump_version
-              run: |
-                  # Bump version
-                  npm version ${{ github.event.inputs.version_type }} --no-git-tag-version
+          # Get the new version
+          NEW_VERSION=$(node -e "console.log(require('./package.json').version);")
+          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          echo "New version: $NEW_VERSION"
 
-                  # Get new version with error handling
-                  NEW_VERSION=$(node -e "try { const fs = require('fs'); const pkg = JSON.parse(fs.readFileSync('./package.json', 'utf8')); console.log(pkg.version); } catch (err) { console.error('Error reading package.json:', err); process.exit(1); }")
-                  echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+      - name: Commit version bump
+        run: |
+          git add package.json
+          git commit -m "Bump version to ${{ steps.bump_version.outputs.new_version }}"
+          git push
 
-                  # Display updated package.json
-                  echo "Updated package.json after version bump:"
-                  cat package.json
+      - name: Create GitHub Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v${{ steps.bump_version.outputs.new_version }}
+          release_name: Release v${{ steps.bump_version.outputs.new_version }}
+          body: |
+            Version ${{ steps.bump_version.outputs.new_version }}
 
-            - name: Commit version bump
-              run: |
-                  git add package.json
-                  git commit -m "Bump version to ${{ steps.bump_version.outputs.new_version }}"
-                  git push
+            ${{ github.event.inputs.release_notes || 'No release notes provided.' }}
+          draft: false
+          prerelease: false
 
-            - name: Create GitHub Release
-              id: create_release
-              uses: actions/create-release@v1
-              env:
-                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-              with:
-                  tag_name: v${{ steps.bump_version.outputs.new_version }}
-                  release_name: Release v${{ steps.bump_version.outputs.new_version }}
-                  body: |
-                      Version ${{ steps.bump_version.outputs.new_version }}
+      - name: Create Git Tag
+        run: |
+          git tag v${{ steps.bump_version.outputs.new_version }}
+          git push --tags
 
-                      ${{ github.event.inputs.release_notes || 'No release notes provided.' }}
-                  draft: false
-                  prerelease: false
-
-            - name: Create Git Tag
-              run: |
-                  git tag v${{ steps.bump_version.outputs.new_version }}
-                  git push --tags
-
-            - name: Publish to npm Registry
-              run: |
-                  # Verify package.json before publishing
-                  echo "About to publish the following package to npm:"
-                  cat package.json
-
-                  # Publish to npm
-                  npm publish
-              env:
-                  NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-
-            - name: Setup Node.js for GitHub Packages
-              uses: actions/setup-node@v3
-              with:
-                  node-version: "18"
-                  registry-url: "https://npm.pkg.github.com"
-                  scope: "@patel96"
-
-            - name: Prepare package for GitHub Packages
-              run: |
-                  # Create a temporary package.json for GitHub Packages
-                  cp package.json package.json.tmp
-
-                  # Display original package.json content for debugging
-                  echo "Original package.json content:"
-                  cat package.json
-
-                  # Update package name for GitHub Packages with better error handling
-                  node -e "
-                    try {
-                      const fs = require('fs');
-                      console.log('Reading package.json...');
-                      const content = fs.readFileSync('./package.json', 'utf8');
-                      console.log('Parsing JSON...');
-                      const pkg = JSON.parse(content);
-                      console.log('Current package name:', pkg.name);
-                      pkg.name = '@patel96/create-rainbow-app';
-                      console.log('New package name:', pkg.name);
-                      fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2));
-                      console.log('Successfully wrote updated package.json');
-                    } catch (error) {
-                      console.error('Error modifying package.json:', error);
-                      process.exit(1);
-                    }
-                  "
-
-                  # Display modified package.json for verification
-                  echo "Modified package.json content:"
-                  cat package.json
-
-                  # Set up authentication for GitHub Packages
-                  echo "//npm.pkg.github.com/:_authToken=${GITHUB_TOKEN}" > .npmrc
-                  echo "@patel96:registry=https://npm.pkg.github.com" >> .npmrc
-              env:
-                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-            - name: Publish to GitHub Packages
-              run: |
-                  echo "Publishing to GitHub Packages..."
-                  # Verify authentication is set up correctly
-                  echo "Checking npm config..."
-                  npm config list
-
-                  # Verify package.json before publishing
-                  echo "About to publish the following package to GitHub Packages:"
-                  cat package.json
-
-                  npm publish --access public
-              env:
-                  NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-            - name: Restore original package.json
-              run: mv package.json.tmp package.json
-              if: always()
+      - name: Publish to npm Registry
+        run: npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
