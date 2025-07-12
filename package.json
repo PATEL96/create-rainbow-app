@@ -1,11 +1,8 @@
 {
-    "name": "@patel96/create-rainbow-app",
-    "version": "4.1.6",
+    "name": "create-rainbow-app",
+    "version": "4.1.4",
     "main": "index.js",
     "license": "MIT",
-    "publishConfig": {
-        "registry": "https://registry.npmjs.org"
-    },
     "dependencies": {
         "chalk": "^5.3.0",
         "fs-extra": "^11.2.0"
