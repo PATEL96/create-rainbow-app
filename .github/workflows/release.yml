@@ -48,14 +48,28 @@ jobs:
             - name: Get current version
               id: current_version
               run: |
-                  echo "version=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
-                  echo "Current version: $(node -p "require('./package.json').version")"
+                  # Display package.json for debugging
+                  echo "Current package.json content:"
+                  cat package.json
+
+                  # Get version with error handling
+                  CURRENT_VERSION=$(node -e "try { const fs = require('fs'); const pkg = JSON.parse(fs.readFileSync('./package.json', 'utf8')); console.log(pkg.version); } catch (err) { console.error('Error reading package.json:', err); process.exit(1); }")
+                  echo "version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+                  echo "Current version: $CURRENT_VERSION"
 
             - name: Bump version
               id: bump_version
               run: |
+                  # Bump version
                   npm version ${{ github.event.inputs.version_type }} --no-git-tag-version
-                  echo "new_version=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
+
+                  # Get new version with error handling
+                  NEW_VERSION=$(node -e "try { const fs = require('fs'); const pkg = JSON.parse(fs.readFileSync('./package.json', 'utf8')); console.log(pkg.version); } catch (err) { console.error('Error reading package.json:', err); process.exit(1); }")
+                  echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+
+                  # Display updated package.json
+                  echo "Updated package.json after version bump:"
+                  cat package.json
 
             - name: Commit version bump
               run: |
@@ -84,7 +98,13 @@ jobs:
                   git push --tags
 
             - name: Publish to npm Registry
-              run: npm publish
+              run: |
+                  # Verify package.json before publishing
+                  echo "About to publish the following package to npm:"
+                  cat package.json
+
+                  # Publish to npm
+                  npm publish
               env:
                   NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
@@ -99,8 +119,34 @@ jobs:
               run: |
                   # Create a temporary package.json for GitHub Packages
                   cp package.json package.json.tmp
-                  # Update package name for GitHub Packages
-                  node -e "const pkg = require('./package.json'); pkg.name = '@patel96/create-rainbow-app'; require('fs').writeFileSync('package.json', JSON.stringify(pkg, null, 2));"
+
+                  # Display original package.json content for debugging
+                  echo "Original package.json content:"
+                  cat package.json
+
+                  # Update package name for GitHub Packages with better error handling
+                  node -e "
+                    try {
+                      const fs = require('fs');
+                      console.log('Reading package.json...');
+                      const content = fs.readFileSync('./package.json', 'utf8');
+                      console.log('Parsing JSON...');
+                      const pkg = JSON.parse(content);
+                      console.log('Current package name:', pkg.name);
+                      pkg.name = '@patel96/create-rainbow-app';
+                      console.log('New package name:', pkg.name);
+                      fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2));
+                      console.log('Successfully wrote updated package.json');
+                    } catch (error) {
+                      console.error('Error modifying package.json:', error);
+                      process.exit(1);
+                    }
+                  "
+
+                  # Display modified package.json for verification
+                  echo "Modified package.json content:"
+                  cat package.json
+
                   # Set up authentication for GitHub Packages
                   echo "//npm.pkg.github.com/:_authToken=${GITHUB_TOKEN}" > .npmrc
                   echo "@patel96:registry=https://npm.pkg.github.com" >> .npmrc
@@ -108,7 +154,17 @@ jobs:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
             - name: Publish to GitHub Packages
-              run: npm publish --access public
+              run: |
+                  echo "Publishing to GitHub Packages..."
+                  # Verify authentication is set up correctly
+                  echo "Checking npm config..."
+                  npm config list
+
+                  # Verify package.json before publishing
+                  echo "About to publish the following package to GitHub Packages:"
+                  cat package.json
+
+                  npm publish --access public
               env:
                   NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
