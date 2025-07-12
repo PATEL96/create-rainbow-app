@@ -1,0 +1,88 @@
+name: Create Release
+
+on:
+    workflow_dispatch:
+        inputs:
+            version_type:
+                description: "Version bump type"
+                required: true
+                default: "patch"
+                type: choice
+                options:
+                    - patch
+                    - minor
+                    - major
+            release_notes:
+                description: "Release notes"
+                required: false
+                type: string
+
+jobs:
+    release:
+        runs-on: ubuntu-latest
+        permissions:
+            contents: write
+            packages: write
+
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@v3
+              with:
+                  fetch-depth: 0
+                  token: ${{ secrets.GITHUB_TOKEN }}
+
+            - name: Setup Git User
+              run: |
+                  git config --global user.name "GitHub Actions"
+                  git config --global user.email "actions@github.com"
+
+            - name: Setup Node.js
+              uses: actions/setup-node@v3
+              with:
+                  node-version: "24"
+                  registry-url: "https://npm.pkg.github.com"
+                  scope: "@PATEL96"
+
+            - name: Install dependencies
+              run: npm ci || npm install
+
+            - name: Get current version
+              id: current_version
+              run: echo "version=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
+
+            - name: Bump version
+              id: bump_version
+              run: |
+                  npm version ${{ github.event.inputs.version_type }} --no-git-tag-version
+                  echo "new_version=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
+
+            - name: Commit version bump
+              run: |
+                  git add package.json
+                  git commit -m "Bump version to ${{ steps.bump_version.outputs.new_version }}"
+                  git push
+
+            - name: Create GitHub Release
+              id: create_release
+              uses: actions/create-release@v1
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              with:
+                  tag_name: v${{ steps.bump_version.outputs.new_version }}
+                  release_name: Release v${{ steps.bump_version.outputs.new_version }}
+                  body: |
+                      Version ${{ steps.bump_version.outputs.new_version }}
+
+                      ${{ github.event.inputs.release_notes || 'No release notes provided.' }}
+                  draft: false
+                  prerelease: false
+
+            - name: Create Git Tag
+              run: |
+                  git tag v${{ steps.bump_version.outputs.new_version }}
+                  git push --tags
+
+            - name: Publish to GitHub Packages
+              run: npm publish
+              env:
+                  NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
