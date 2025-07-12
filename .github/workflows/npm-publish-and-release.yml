@@ -4,7 +4,6 @@ on:
     # Automatic triggers
     push:
         branches: [main]
-        tags: ["v*"]
 
     # Manual trigger with version selection
     workflow_dispatch:
