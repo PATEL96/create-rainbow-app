@@ -180,8 +180,8 @@ function createNextApp(projectName, packageManager, useAppRouter, chalk) {
     const appFlag = useAppRouter ? "--app" : "--app=false";
     const createNextCommand =
         packageManager === "bun"
-            ? `bunx create-next-app@latest ${projectName} --typescript --tailwind --eslint --src-dir ${appFlag} --import-alias="@/*" --disable-git`
-            : `npx create-next-app@latest ${projectName} --typescript --tailwind --eslint --src-dir ${appFlag} --import-alias="@/*" --disable-git`;
+            ? `bunx create-next-app@latest ${projectName} --typescript --tailwind --eslint --src-dir ${appFlag} --import-alias="@/*"`
+            : `npx create-next-app@latest ${projectName} --typescript --tailwind --eslint --src-dir ${appFlag} --import-alias="@/*"`;
 
     try {
         execSync(createNextCommand, { stdio: "inherit" });
