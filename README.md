@@ -11,8 +11,19 @@ Supports **`Bun`** and **`Yarn`** for dependency management. 🚀
 ## Features
 
 - Clone a pre-configured [RainbowKit](https://www.rainbowkit.com/) template repository.
+- **Choose between Pages Router or App Router** during setup.
 - Installs dependencies with **Bun** (preferred) or **Yarn** automatically.
+- Automatically configures Web3 providers based on your router choice.
 - Provides clear next steps for starting your development server.
+
+## Router Support
+
+The CLI now supports both Next.js routing approaches:
+
+- **Pages Router**: Traditional Next.js routing with `_app.tsx` for providers
+- **App Router**: Modern Next.js routing with `layout.tsx` and client components
+
+During setup, you'll be prompted to choose your preferred router type. The template will be automatically configured with the appropriate file structure and provider setup.
 
 ---
 

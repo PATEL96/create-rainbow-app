@@ -19,14 +19,20 @@ const path = require("path");
         const projectName = validateProjectName(process.argv[2], chalk);
         const targetPath = path.join(process.cwd(), projectName);
 
+        // Ask user for router preference
+        const useAppRouter = await askForRouterPreference(chalk);
+
         // Determine package manager to use (bun or yarn)
         const packageManager = determinePackageManager(chalk);
 
         // Create Next.js app
-        createNextApp(projectName, packageManager, chalk);
+        createNextApp(projectName, packageManager, useAppRouter, chalk);
 
         // Change directory to the target path
         process.chdir(targetPath);
+
+        // Use the selected router type
+        const isAppRouter = useAppRouter;
 
         // Set up Web3 configuration
         setupWeb3Config(chalk);
@@ -38,10 +44,10 @@ const path = require("path");
         setupShadcnUI(packageManager, chalk);
 
         // Update starter template files
-        updateTemplateFiles(chalk);
+        updateTemplateFiles(isAppRouter, chalk);
 
         // Display success message
-        displaySuccessMessage(projectName, packageManager, chalk);
+        displaySuccessMessage(projectName, packageManager, isAppRouter, chalk);
     } catch (error) {
         console.error(`\n❌ Error: ${error.message}`);
         process.exit(1);
@@ -67,6 +73,11 @@ function displayWelcomeBanner(chalk) {
     console.log(
         chalk.blue.bold(
             "    🌈 Production-ready Web3 dApp template with Next.js, TypeScript, RainbowKit, Wagmi, viem & ShadCN/UI!",
+        ),
+    );
+    console.log(
+        chalk.magenta.bold(
+            "    📁 Supports both Pages Router and App Router architectures",
         ),
     );
     console.log(
@@ -122,20 +133,55 @@ function determinePackageManager(chalk) {
 }
 
 /**
+ * Asks user for router preference
+ * @param {Object} chalk - Chalk instance for colored output
+ * @returns {Promise<boolean>} True if App Router, false if Pages Router
+ */
+async function askForRouterPreference(chalk) {
+    const readline = require("readline").createInterface({
+        input: process.stdin,
+        output: process.stdout,
+    });
+
+    return new Promise((resolve) => {
+        console.log(chalk.blue("Which router would you like to use?"));
+        console.log(chalk.yellow("1. Pages Router (Traditional)"));
+        console.log(chalk.yellow("2. App Router (New, Recommended)"));
+
+        readline.question(
+            chalk.green("Enter your choice (1 or 2): "),
+            (answer) => {
+                readline.close();
+                const choice = answer.trim();
+                if (choice === "2") {
+                    console.log(chalk.blue("Selected: App Router"));
+                    resolve(true);
+                } else {
+                    console.log(chalk.blue("Selected: Pages Router"));
+                    resolve(false);
+                }
+            },
+        );
+    });
+}
+
+/**
  * Creates a new Next.js application with the specified configuration
  * @param {string} projectName - Name of the project
  * @param {string} packageManager - Package manager to use
+ * @param {boolean} useAppRouter - Whether to use App Router
  * @param {Object} chalk - Chalk instance for colored output
  */
-function createNextApp(projectName, packageManager, chalk) {
+function createNextApp(projectName, packageManager, useAppRouter, chalk) {
     console.log(
         chalk.blue("Creating Next.js app with TypeScript and Tailwind CSS..."),
     );
 
+    const appFlag = useAppRouter ? "--app" : "--app=false";
     const createNextCommand =
         packageManager === "bun"
-            ? `bunx create-next-app@latest ${projectName} --typescript --tailwind --eslint --src-dir --app=false --import-alias="@/* --disable-git"`
-            : `npx create-next-app@latest ${projectName} --typescript --tailwind --eslint --src-dir --app=false --import-alias="@/* --disable-git"`;
+            ? `bunx create-next-app@latest ${projectName} --typescript --tailwind --eslint --src-dir ${appFlag} --import-alias="@/*" --disable-git`
+            : `npx create-next-app@latest ${projectName} --typescript --tailwind --eslint --src-dir ${appFlag} --import-alias="@/*" --disable-git`;
 
     try {
         execSync(createNextCommand, { stdio: "inherit" });
@@ -254,13 +300,29 @@ function setupShadcnUI(packageManager, chalk) {
 
 /**
  * Updates template files with custom content
+ * @param {boolean} isAppRouter - Whether using App Router or Pages Router
  * @param {Object} chalk - Chalk instance for colored output
  */
-function updateTemplateFiles(chalk) {
+function updateTemplateFiles(isAppRouter, chalk) {
     try {
-        // Update _app.tsx with providers
-        console.log(chalk.blue("Setting up providers in _app.tsx..."));
-        const appContent = `import '@/styles/globals.css';
+        if (isAppRouter) {
+            setupAppRouter(chalk);
+        } else {
+            setupPagesRouter(chalk);
+        }
+    } catch (error) {
+        throw new Error(`Failed to update template files: ${error.message}`);
+    }
+}
+
+/**
+ * Sets up Pages Router template files
+ * @param {Object} chalk - Chalk instance for colored output
+ */
+function setupPagesRouter(chalk) {
+    // Update _app.tsx with providers
+    console.log(chalk.blue("Setting up providers in _app.tsx..."));
+    const appContent = `import '@/styles/globals.css';
 import '@rainbow-me/rainbowkit/styles.css';
 import type { AppProps } from 'next/app';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -282,11 +344,11 @@ export default function App({ Component, pageProps }: AppProps) {
   );
 }`;
 
-        fs.writeFileSync(path.join("src", "pages", "_app.tsx"), appContent);
+    fs.writeFileSync(path.join("src", "pages", "_app.tsx"), appContent);
 
-        // Update index.tsx with custom content
-        console.log(chalk.blue("Updating index.tsx with custom content..."));
-        const indexContent = `import { ConnectButton } from "@rainbow-me/rainbowkit";
+    // Update index.tsx with custom content
+    console.log(chalk.blue("Updating index.tsx with custom content..."));
+    const indexContent = `import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { Geist, Geist_Mono } from "next/font/google";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -367,20 +429,191 @@ export default function Home() {
   );
 }`;
 
-        fs.writeFileSync(path.join("src", "pages", "index.tsx"), indexContent);
-    } catch (error) {
-        throw new Error(`Failed to update template files: ${error.message}`);
-    }
+    fs.writeFileSync(path.join("src", "pages", "index.tsx"), indexContent);
+}
+
+/**
+ * Sets up App Router template files
+ * @param {Object} chalk - Chalk instance for colored output
+ */
+function setupAppRouter(chalk) {
+    // Create Web3Provider directory
+    console.log(chalk.blue("Creating Web3Provider directory..."));
+    const providerDir = path.join("src", "app", "Web3Provider");
+    fs.mkdirSync(providerDir, { recursive: true });
+
+    // Create Provider.tsx
+    console.log(chalk.blue("Creating Provider.tsx..."));
+    const providerContent = `"use client";
+import { config } from "@/wagmi";
+import { RainbowKitProvider } from "@rainbow-me/rainbowkit";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { WagmiProvider } from "wagmi";
+
+const queryClient = new QueryClient();
+
+export default function Provider({
+    children,
+}: Readonly<{
+    children: React.ReactNode;
+}>) {
+    return (
+        <WagmiProvider config={config}>
+            <QueryClientProvider client={queryClient}>
+                <RainbowKitProvider>{children}</RainbowKitProvider>
+            </QueryClientProvider>
+        </WagmiProvider>
+    );
+}`;
+
+    fs.writeFileSync(path.join(providerDir, "Provider.tsx"), providerContent);
+
+    // Update layout.tsx
+    console.log(chalk.blue("Updating layout.tsx..."));
+    const layoutContent = `import type { Metadata } from "next";
+import { Geist, Geist_Mono } from "next/font/google";
+import "./globals.css";
+import Provider from "@/app/Web3Provider/Provider";
+import "@rainbow-me/rainbowkit/styles.css";
+
+const geistSans = Geist({
+    variable: "--font-geist-sans",
+    subsets: ["latin"],
+});
+
+const geistMono = Geist_Mono({
+    variable: "--font-geist-mono",
+    subsets: ["latin"],
+});
+
+export const metadata: Metadata = {
+    title: "Create Next App",
+    description: "Generated by create next app",
+};
+
+export default function RootLayout({
+    children,
+}: Readonly<{
+    children: React.ReactNode;
+}>) {
+    return (
+        <html lang="en">
+            <body
+                className={\`\${geistSans.variable} \${geistMono.variable} antialiased\`}
+            >
+                <Provider>{children}</Provider>
+            </body>
+        </html>
+    );
+}`;
+
+    fs.writeFileSync(path.join("src", "app", "layout.tsx"), layoutContent);
+
+    // Update page.tsx
+    console.log(chalk.blue("Updating page.tsx..."));
+    const pageContent = `import { ConnectButton } from "@rainbow-me/rainbowkit";
+import { Geist, Geist_Mono } from "next/font/google";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+
+const geistSans = Geist({
+  variable: "--font-geist-sans",
+  subsets: ["latin"],
+});
+
+const geistMono = Geist_Mono({
+  variable: "--font-geist-mono",
+  subsets: ["latin"],
+});
+
+export default function Home() {
+  return (
+    <div
+      className={\`\${geistSans.className} \${geistMono.className} grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]\`}
+    >
+      <main className="flex flex-col gap-10 row-start-2 items-center sm:items-start">
+        <div className="flex flex-col items-center gap-4">
+          <h1 className="text-4xl font-bold text-center">
+            🎒 Web3 Dapp Template
+          </h1>
+          <p className="text-lg text-center text-gray-600 dark:text-gray-400">
+            Web3 dApp template with Next.js, TypeScript, Tailwind CSS & shadcn/ui
+          </p>
+        </div>
+
+        <div className="flex flex-col items-center justify-center gap-6 w-full">
+          <ConnectButton />
+
+          <div className="w-full p-6 border border-gray-200 dark:border-gray-800 rounded-lg">
+            <h2 className="text-xl font-semibold mb-4 text-center">
+              🚀 Get Started
+            </h2>
+            <ol className="list-inside list-decimal text-sm space-y-2 font-[family-name:var(--font-geist-mono)]">
+              <li>
+                Edit{" "}
+                <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
+                  src/app/page.tsx
+                </code>
+              </li>
+              <li>
+                Update your project ID in{" "}
+                <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
+                  src/wagmi.ts
+                </code>
+              </li>
+              <li>Add shadcn/ui components as needed</li>
+              <li>Build your Web3 application!</li>
+            </ol>
+          </div>
+        </div>
+
+        <div className="flex gap-4 items-center flex-col sm:flex-row">
+          <Link
+            href="https://rainbowkit.com/docs"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <Button variant="secondary">📚 RainbowKit Docs</Button>
+          </Link>
+          <Link
+            href="https://ui.shadcn.com"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <Button variant="outline">🎨 shadcn/ui</Button>
+          </Link>
+        </div>
+      </main>
+
+      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center text-sm text-gray-500">
+        <span>Built with ❤️ using Web3 Dapp Template</span>
+      </footer>
+    </div>
+  );
+}`;
+
+    fs.writeFileSync(path.join("src", "app", "page.tsx"), pageContent);
 }
 
 /**
  * Displays success message with next steps
  * @param {string} projectName - Name of the project
  * @param {string} packageManager - Package manager used
+ * @param {boolean} isAppRouter - Whether using App Router or Pages Router
  * @param {Object} chalk - Chalk instance for colored output
  */
-function displaySuccessMessage(projectName, packageManager, chalk) {
+function displaySuccessMessage(
+    projectName,
+    packageManager,
+    isAppRouter,
+    chalk,
+) {
     console.log(chalk.green(`\n✅ Project ${projectName} is ready!`));
+    console.log(
+        chalk.yellow(
+            `Router type: ${isAppRouter ? "App Router" : "Pages Router"}`,
+        ),
+    );
     console.log(chalk.yellow(`To start working on your project, run:`));
     console.log(chalk.cyan(`\t cd ${projectName}`));
     console.log(
