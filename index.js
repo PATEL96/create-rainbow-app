@@ -439,7 +439,7 @@ export default function Home() {
 function setupAppRouter(chalk) {
     // Create Web3Provider directory
     console.log(chalk.blue("Creating Web3Provider directory..."));
-    const providerDir = path.join("src", "app", "Web3Provider");
+    const providerDir = path.join("src", "Web3Provider");
     fs.mkdirSync(providerDir, { recursive: true });
 
     // Create Provider.tsx
@@ -473,7 +473,7 @@ export default function Provider({
     const layoutContent = `import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import Provider from "@/app/Web3Provider/Provider";
+import Provider from "@/Web3Provider/Provider";
 import "@rainbow-me/rainbowkit/styles.css";
 
 const geistSans = Geist({
