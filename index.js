@@ -43,6 +43,9 @@ const path = require("path");
 		// Configure UI components
 		setupShadcnUI(packageManager, chalk);
 
+		// Install additional wallet connector packages
+		installWalletConnectors(packageManager, chalk);
+
 		// Update starter template files
 		updateTemplateFiles(isAppRouter, chalk);
 
@@ -273,8 +276,41 @@ function installDependencies(packageManager, chalk) {
 }
 
 /**
- * Sets up shadcn/ui components
- * @param {string} packageManager - Package manager to use
+ * Install additional wallet connector packages
+ * @param {string} packageManager - Package manager to use (bun or yarn)
+ * @param {Object} chalk - Chalk instance for colored output
+ */
+function installWalletConnectors(packageManager, chalk) {
+	try {
+		console.log(chalk.blue("Installing wallet connector packages..."));
+		const packages = [
+			"@base-org/account",
+			"@coinbase/wallet-sdk",
+			"@metamask/sdk",
+			"@safe-global/safe-apps-provider",
+			"@safe-global/safe-apps-sdk",
+			"@walletconnect/ethereum-provider",
+		].join(" ");
+
+		const installCommand =
+			packageManager === "bun"
+				? `bun add ${packages}`
+				: `yarn add ${packages}`;
+
+		execSync(installCommand, { stdio: "inherit" });
+		console.log(
+			chalk.green("✓ Wallet connector packages installed successfully"),
+		);
+	} catch (error) {
+		throw new Error(
+			`Failed to install wallet connector packages: ${error.message}`,
+		);
+	}
+}
+
+/**
+ * Setup and configure shadcn/ui
+ * @param {string} packageManager - Package manager to use (bun or yarn)
  * @param {Object} chalk - Chalk instance for colored output
  */
 function setupShadcnUI(packageManager, chalk) {
