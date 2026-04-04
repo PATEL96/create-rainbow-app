@@ -4,22 +4,130 @@
 const { execSync } = require("child_process");
 
 /**
+ * Renders an arrow-key selection prompt and returns the chosen index
+ * @param {Object} chalk - Chalk instance for colored output
+ * @param {string} prompt - Question to display
+ * @param {string[]} options - List of choices
+ * @returns {Promise<number>} Index of selected option
+ */
+async function arrowSelect(chalk, prompt, options) {
+	return new Promise((resolve) => {
+		let selected = 0;
+
+		process.stdout.write(chalk.blue(prompt) + "\n");
+		options.forEach((opt, i) => {
+			process.stdout.write(
+				`  ${i === selected ? chalk.cyan("> " + opt) : "  " + opt}\n`,
+			);
+		});
+
+		const redraw = () => {
+			process.stdout.write(`\x1b[${options.length}A`);
+			options.forEach((opt, i) => {
+				process.stdout.write(
+					`\r  ${i === selected ? chalk.cyan("> " + opt) : "  " + opt}\x1b[K\n`,
+				);
+			});
+		};
+
+		process.stdin.setRawMode(true);
+		process.stdin.resume();
+		process.stdin.setEncoding("utf8");
+
+		const onData = (key) => {
+			if (key === "\x1b[A") {
+				selected = (selected - 1 + options.length) % options.length;
+				redraw();
+			} else if (key === "\x1b[B") {
+				selected = (selected + 1) % options.length;
+				redraw();
+			} else if (key === "\r" || key === "\n") {
+				process.stdin.setRawMode(false);
+				process.stdin.pause();
+				process.stdin.removeListener("data", onData);
+				process.stdout.write("\n");
+				resolve(selected);
+			} else if (key === "\x03") {
+				process.exit();
+			}
+		};
+
+		process.stdin.on("data", onData);
+	});
+}
+
+/**
+ * Interactively gathers Next.js project options via arrow key prompts
+ * @param {Object} chalk - Chalk instance for colored output
+ * @returns {Promise<Object>} Selected options
+ */
+async function gatherNextOptions(chalk) {
+	const routerIdx = await arrowSelect(
+		chalk,
+		"Which router would you like to use?",
+		["App Router (Recommended)", "Pages Router"],
+	);
+
+	const linterIdx = await arrowSelect(
+		chalk,
+		"Which linter / formatter would you like to use?",
+		["ESLint", "Biome"],
+	);
+
+	const reactCompilerIdx = await arrowSelect(
+		chalk,
+		"Enable React Compiler?",
+		["Yes", "No"],
+	);
+
+	const gitIdx = await arrowSelect(chalk, "Initialize a git repository?", [
+		"Yes",
+		"No",
+	]);
+
+	return {
+		useAppRouter: routerIdx === 0,
+		useBiome: linterIdx === 1,
+		useReactCompiler: reactCompilerIdx === 0,
+		initGit: gitIdx === 0,
+	};
+}
+
+/**
  * Creates a new Next.js application with the specified configuration
  * @param {string} projectName - Name of the project
  * @param {string} packageManager - Package manager to use
- * @param {boolean} useAppRouter - Whether to use App Router
+ * @param {Object} options - Project options gathered from gatherNextOptions
  * @param {Object} chalk - Chalk instance for colored output
  */
-function createNextApp(projectName, packageManager, useAppRouter, chalk) {
+function createNextApp(projectName, packageManager, options, chalk) {
 	console.log(
 		chalk.blue("Creating Next.js app with TypeScript and Tailwind CSS..."),
 	);
 
-	const appFlag = useAppRouter ? "--app" : "";
-	const createNextCommand =
-		packageManager === "bun"
-			? `bunx create-next-app@latest ${projectName} --typescript --react-compiler --tailwind --eslint --src-dir ${appFlag} --import-alias="@/*"`
-			: `npx create-next-app@latest ${projectName} --typescript --react-compiler --tailwind --eslint --src-dir ${appFlag} --import-alias="@/*"`;
+	const appFlag = options.useAppRouter ? "--app" : "--no-app";
+	const linterFlag = options.useBiome ? "--biome" : "--eslint";
+	const reactCompilerFlag = options.useReactCompiler
+		? "--react-compiler"
+		: "";
+	const gitFlag = options.initGit ? "" : "--disable-git";
+
+	const flags = [
+		"--ts",
+		"--tailwind",
+		"--src-dir",
+		'--import-alias="@/*"',
+		"--yes",
+		appFlag,
+		linterFlag,
+		reactCompilerFlag,
+		gitFlag,
+	]
+		.filter(Boolean)
+		.join(" ");
+
+	const runner = packageManager === "bun" ? "bunx" : "npx";
+	const createNextCommand = `${runner} create-next-app@latest ${projectName} ${flags}`;
 
 	try {
 		execSync(createNextCommand, { stdio: "inherit" });
@@ -107,6 +215,7 @@ function setupShadcnUI(packageManager, chalk) {
 }
 
 module.exports = {
+	gatherNextOptions,
 	createNextApp,
 	installDependencies,
 	installWalletConnectors,

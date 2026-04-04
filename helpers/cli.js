@@ -2,7 +2,6 @@
  * CLI utility functions for create-rainbow-app
  */
 const { execSync } = require("child_process");
-const readline = require("readline");
 
 /**
  * Displays a colorful welcome banner
@@ -83,43 +82,18 @@ function determinePackageManager(chalk) {
 }
 
 /**
- * Asks user for router preference
- * @param {Object} chalk - Chalk instance for colored output
- * @returns {Promise<boolean>} True if App Router, false if Pages Router
- */
-async function askForRouterPreference(chalk) {
-	const rl = readline.createInterface({
-		input: process.stdin,
-		output: process.stdout,
-	});
-
-	return new Promise((resolve) => {
-		console.log(chalk.blue("Which router would you like to use?"));
-		console.log(chalk.yellow("1. Pages Router (Traditional)"));
-		console.log(chalk.yellow("2. App Router (New, Recommended)"));
-
-		rl.question(chalk.green("Enter your choice (1 or 2): "), (answer) => {
-			rl.close();
-			const choice = answer.trim();
-			if (choice === "2") {
-				console.log(chalk.blue("Selected: App Router"));
-				resolve(true);
-			} else {
-				console.log(chalk.blue("Selected: Pages Router"));
-				resolve(false);
-			}
-		});
-	});
-}
-
-/**
  * Displays success message with next steps
  * @param {string} projectName - Name of the project
  * @param {string} packageManager - Package manager used
  * @param {boolean} isAppRouter - Whether using App Router or Pages Router
  * @param {Object} chalk - Chalk instance for colored output
  */
-function displaySuccessMessage(projectName, packageManager, isAppRouter, chalk) {
+function displaySuccessMessage(
+	projectName,
+	packageManager,
+	isAppRouter,
+	chalk,
+) {
 	console.log(chalk.green(`\nProject ${projectName} is ready!`));
 	console.log(
 		chalk.yellow(
@@ -137,6 +111,5 @@ module.exports = {
 	displayWelcomeBanner,
 	validateProjectName,
 	determinePackageManager,
-	askForRouterPreference,
 	displaySuccessMessage,
 };

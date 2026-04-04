@@ -302,10 +302,306 @@ export default function Home() {
 `,
 };
 
+// AGENTS.md template written to the root of every scaffolded project
+const agentsMdTemplate = `# Ethereum DApp — Agent Guidelines
+
+This project was scaffolded with create-rainbow-app. Read this file in full before writing any code.
+
+---
+
+## Stack & Versions
+
+| Package                | Version | Notes                                |
+| ---------------------- | ------- | ------------------------------------ |
+| next                   | 15.x    | App Router or Pages Router           |
+| typescript             | 5.x     |                                      |
+| wagmi                  | 2.x     | Breaking changes from v1 — see below |
+| viem                   | 2.x     | Replaces ethers.js                   |
+| @rainbow-me/rainbowkit | 2.x     |                                      |
+| @tanstack/react-query  | 5.x     | Breaking changes from v4 — see below |
+| tailwindcss            | 3.x     |                                      |
+| shadcn/ui              | latest  |                                      |
+
+---
+
+## Project Structure
+
+\`\`\`
+src/
+  abi/              # Contract ABI JSON files
+  app/              # App Router: layout.tsx, page.tsx (if App Router)
+  pages/            # Pages Router: _app.tsx, index.tsx (if Pages Router)
+  components/
+    ui/             # shadcn/ui primitives — do not edit these files
+  lib/
+    fonts.ts        # Geist font exports
+  provider/
+    web3provider.tsx  # Single file that composes all Web3 providers
+  wagmi.ts          # Wagmi config — chains, connectors, projectId live here
+\`\`\`
+
+---
+
+## wagmi v2 — Critical Changes from v1
+
+**Hook renames — always use the v2 names:**
+
+| v1 (wrong)                | v2 (correct)               |
+| ------------------------- | -------------------------- |
+| \`useContractRead\`         | \`useReadContract\`          |
+| \`useContractWrite\`        | \`useWriteContract\`         |
+| \`usePrepareContractWrite\` | removed — do not use       |
+| \`useContractReads\`        | \`useReadContracts\`         |
+| \`useContractEvent\`        | \`useWatchContractEvent\`    |
+| \`useNetwork\`              | \`useChainId\` / \`useChains\` |
+| \`useSwitchNetwork\`        | \`useSwitchChain\`           |
+| \`useAccount\`              | \`useConnection\`            |
+| \`useBalance\`              | same name, new signature   |
+
+**Reading from a contract:**
+
+\`\`\`ts
+import { useReadContract } from "wagmi";
+import abi from "@/abi/demo.json";
+
+const { data, isLoading } = useReadContract({
+	address: "0x...",
+	abi,
+	functionName: "greeting",
+});
+\`\`\`
+
+**Writing to a contract:**
+
+\`\`\`ts
+import { useWriteContract, useWaitForTransactionReceipt } from "wagmi";
+
+const writeContractCall = useWriteContract();
+
+const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({
+	hash,
+});
+
+writeContractCall.mutate({
+	address: "0x...",
+	abi,
+	functionName: "setGreeting",
+	args: ["hello"],
+});
+// or
+writeContractCall.mutateAsync({
+	address: "0x...",
+	abi,
+	functionName: "setGreeting",
+	args: ["hello"],
+});
+\`\`\`
+
+There is no \`prepare\` step in v2. Call \`writeContract\` directly.
+
+**Account:**
+
+\`\`\`ts
+import { useAccount } from "wagmi";
+
+const { address, isConnected, chain } = useAccount();
+// address is \`0x\${string} | undefined\`
+\`\`\`
+
+**Balance:**
+
+\`\`\`ts
+const { data: balance } = useBalance({ address });
+// balance.value is bigint, balance.formatted is string
+\`\`\`
+
+---
+
+## viem v2 — Key Patterns
+
+viem replaces ethers.js entirely. Never import from ethers in this project.
+
+**Common utilities:**
+
+\`\`\`ts
+import { parseEther, formatEther, parseUnits, formatUnits } from "viem";
+
+parseEther("1.0"); // => 1000000000000000000n
+formatEther(1000000000000000000n); // => "1.0"
+\`\`\`
+
+**Address type:**
+
+\`\`\`ts
+import type { Address } from "viem";
+// All addresses are typed as \`0x\${string}\`
+// Never use plain string for an address param
+\`\`\`
+
+**Encoding calldata:**
+
+\`\`\`ts
+import { encodeFunctionData } from "viem";
+
+const data = encodeFunctionData({
+	abi,
+	functionName: "setGreeting",
+	args: ["hello"],
+});
+\`\`\`
+
+**All amounts are bigint — never use Number for on-chain values.**
+
+---
+
+## RainbowKit
+
+**Config is in \`src/wagmi.ts\` — use \`getDefaultConfig\`:**
+
+\`\`\`ts
+import { getDefaultConfig } from "@rainbow-me/rainbowkit";
+
+export const config = getDefaultConfig({
+	appName: "My App",
+	projectId: "YOUR_PROJECT_ID", // Replace with WalletConnect Cloud project ID
+	chains: [mainnet, polygon, optimism, arbitrum, base],
+	ssr: true,
+});
+\`\`\`
+
+\`getDefaultConfig\` replaces the old \`configureChains\` + \`createConfig\` pattern. Do not use the old pattern.
+
+**Connect button — use as-is, do not rebuild it:**
+
+\`\`\`tsx
+import { ConnectButton } from "@rainbow-me/rainbowkit";
+
+<ConnectButton />;
+\`\`\`
+
+**Provider order in \`src/provider/web3provider.tsx\` must be:**
+
+\`\`\`
+WagmiProvider
+  QueryClientProvider
+    RainbowKitProvider
+      {children}
+\`\`\`
+
+Do not change this nesting order.
+
+**Before shipping**, replace \`YOUR_PROJECT_ID\` in \`src/wagmi.ts\` with a real WalletConnect Cloud project ID from https://cloud.walletconnect.com.
+
+---
+
+## @tanstack/react-query v5 — Critical Changes from v4
+
+**useQuery now takes a single options object — no overloads:**
+
+\`\`\`ts
+// v4 (wrong)
+useQuery(["key"], fetchFn);
+
+// v5 (correct)
+useQuery({ queryKey: ["key"], queryFn: fetchFn });
+\`\`\`
+
+**\`onSuccess\` / \`onError\` callbacks are removed from \`useQuery\`.** Use \`useEffect\` to react to data changes:
+
+\`\`\`ts
+const { data } = useQuery({ queryKey: ["key"], queryFn: fetchFn });
+
+useEffect(() => {
+	if (data) {
+		/* handle */
+	}
+}, [data]);
+\`\`\`
+
+**\`cacheTime\` is renamed to \`gcTime\`.**
+
+**\`isLoading\` vs \`isPending\`:**
+
+- \`isLoading\` — query has no cached data and is fetching
+- \`isPending\` — no data yet (includes disabled queries)
+
+Use \`isPending\` when the query may be disabled.
+
+---
+
+## shadcn/ui
+
+Components live in \`src/components/ui/\`. Do not edit files in that directory.
+
+To add a new component:
+
+\`\`\`
+bunx shadcn@latest add <component-name>
+\`\`\`
+
+Import from the \`@/components/ui/\` alias:
+
+\`\`\`ts
+import { Button } from "@/components/ui/button";
+\`\`\`
+
+Available variants for Button: \`default\`, \`destructive\`, \`outline\`, \`secondary\`, \`ghost\`, \`link\`.
+
+---
+
+## TypeScript Conventions
+
+- All contract addresses must be typed as \`0x\${string}\` or \`Address\` from viem — never \`string\`.
+- All on-chain numeric values must be \`bigint\` — never \`number\`.
+- ABIs must be typed with \`as const\` for full type inference:
+    \`\`\`ts
+    import abi from "@/abi/demo.json" assert { type: "json" };
+    // or define inline with \`as const\`
+    \`\`\`
+- Never use \`any\`. Use \`unknown\` and narrow with type guards.
+
+---
+
+## Provider & Client Component Rules (App Router only)
+
+- \`src/provider/web3provider.tsx\` has \`"use client"\` at the top — it must stay there.
+- Any component that uses a wagmi hook, RainbowKit hook, or react-query hook must be a client component (\`"use client"\`).
+- \`layout.tsx\` is a server component — do not add hooks or browser APIs there. Use the Provider for all client-side setup.
+- Never add \`"use client"\` to \`layout.tsx\` or \`page.tsx\` unless strictly required.
+
+---
+
+## Adding a New Chain
+
+Import from \`viem/chains\` and add to the \`chains\` array in \`src/wagmi.ts\`:
+
+\`\`\`ts
+import { mainnet, polygon, base, arbitrum, optimism, zora } from "viem/chains";
+
+export const config = getDefaultConfig({
+  ...
+  chains: [mainnet, polygon, base, arbitrum, optimism, zora],
+});
+\`\`\`
+
+---
+
+## Common Mistakes to Avoid
+
+- Do not use \`ethers\`, \`web3.js\`, or \`@ethersproject/*\` — this project uses viem exclusively.
+- Do not call \`usePrepareContractWrite\` — it does not exist in wagmi v2.
+- Do not use \`Number()\` to convert bigint on-chain values — use \`formatEther\` / \`formatUnits\`.
+- Do not read \`theme\` from \`useTheme\` during SSR without a \`mounted\` guard — it will be \`undefined\` on the server.
+- Do not use plain \`string\` for Ethereum addresses — always use \`0x\${string}\` or \`Address\`.
+- Do not mutate the \`QueryClient\` instance — it is created once and shared via \`QueryClientProvider\`.
+- Do not add new dependencies without checking if wagmi or viem already exports the utility you need.
+`;
+
 module.exports = {
 	wagmiTemplate,
 	fontsTemplate,
 	demoAbiTemplate,
 	appRouter,
 	pagesRouter,
+	agentsMdTemplate,
 };

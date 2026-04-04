@@ -9,6 +9,7 @@ const {
 	demoAbiTemplate,
 	appRouter,
 	pagesRouter,
+	agentsMdTemplate,
 } = require("./templates");
 
 /**
@@ -17,6 +18,10 @@ const {
  */
 function setupWeb3Config(chalk) {
 	try {
+		// Write AGENTS.md to project root (overwrites the generic Next.js one)
+		console.log(chalk.blue("Writing AGENTS.md..."));
+		fs.writeFileSync("AGENTS.md", agentsMdTemplate);
+
 		// Create wagmi.ts file in src folder
 		console.log(chalk.blue("Creating wagmi.ts configuration..."));
 		fs.writeFileSync(path.join("src", "wagmi.ts"), wagmiTemplate);

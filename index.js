@@ -5,11 +5,11 @@ const {
 	displayWelcomeBanner,
 	validateProjectName,
 	determinePackageManager,
-	askForRouterPreference,
 	displaySuccessMessage,
 } = require("./helpers/cli");
 
 const {
+	gatherNextOptions,
 	createNextApp,
 	installDependencies,
 	setupShadcnUI,
@@ -33,14 +33,14 @@ const { setupWeb3Config, updateTemplateFiles } = require("./helpers/setup");
 		const projectName = validateProjectName(process.argv[2], chalk);
 		const targetPath = path.join(process.cwd(), projectName);
 
-		// Ask user for router preference
-		const useAppRouter = await askForRouterPreference(chalk);
+		// Gather Next.js project options via arrow key prompts
+		const options = await gatherNextOptions(chalk);
 
 		// Determine package manager to use (bun or yarn)
 		const packageManager = determinePackageManager(chalk);
 
 		// Create Next.js app
-		createNextApp(projectName, packageManager, useAppRouter, chalk);
+		createNextApp(projectName, packageManager, options, chalk);
 
 		// Change directory to the target path
 		process.chdir(targetPath);
@@ -55,10 +55,15 @@ const { setupWeb3Config, updateTemplateFiles } = require("./helpers/setup");
 		setupShadcnUI(packageManager, chalk);
 
 		// Update starter template files
-		updateTemplateFiles(useAppRouter, chalk);
+		updateTemplateFiles(options.useAppRouter, chalk);
 
 		// Display success message
-		displaySuccessMessage(projectName, packageManager, useAppRouter, chalk);
+		displaySuccessMessage(
+			projectName,
+			packageManager,
+			options.useAppRouter,
+			chalk,
+		);
 	} catch (error) {
 		console.error(`\nError: ${error.message}`);
 		process.exit(1);
