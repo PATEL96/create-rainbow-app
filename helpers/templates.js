@@ -402,9 +402,9 @@ There is no \`prepare\` step in v2. Call \`writeContract\` directly.
 **Account:**
 
 \`\`\`ts
-import { useAccount } from "wagmi";
+import { useConnection } from "wagmi";
 
-const { address, isConnected, chain } = useAccount();
+const { address, isConnected, chain } = useConnection();
 // address is \`0x\${string} | undefined\`
 \`\`\`
 
