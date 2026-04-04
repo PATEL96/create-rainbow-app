@@ -29,7 +29,7 @@ function setupWeb3Config(chalk) {
 
 		// Create ABI folder and demo.json
 		console.log(chalk.blue("Creating ABI demo.json..."));
-		const abiDir = path.join("src", "ABI");
+		const abiDir = path.join("src", "abi");
 		fs.mkdirSync(abiDir, { recursive: true });
 		fs.writeFileSync(
 			path.join(abiDir, "demo.json"),
@@ -60,7 +60,10 @@ function setupAppRouter(chalk) {
 
 		// Update layout.tsx
 		console.log(chalk.blue("Updating layout.tsx..."));
-		fs.writeFileSync(path.join("src", "app", "layout.tsx"), appRouter.layout);
+		fs.writeFileSync(
+			path.join("src", "app", "layout.tsx"),
+			appRouter.layout,
+		);
 
 		// Update page.tsx
 		console.log(chalk.blue("Updating page.tsx..."));
@@ -90,11 +93,17 @@ function setupPagesRouter(chalk) {
 
 		// Update _app.tsx
 		console.log(chalk.blue("Updating _app.tsx..."));
-		fs.writeFileSync(path.join("src", "pages", "_app.tsx"), pagesRouter.app);
+		fs.writeFileSync(
+			path.join("src", "pages", "_app.tsx"),
+			pagesRouter.app,
+		);
 
 		// Update index.tsx
 		console.log(chalk.blue("Updating index.tsx..."));
-		fs.writeFileSync(path.join("src", "pages", "index.tsx"), pagesRouter.index);
+		fs.writeFileSync(
+			path.join("src", "pages", "index.tsx"),
+			pagesRouter.index,
+		);
 	} catch (error) {
 		throw new Error(`Failed to setup Pages Router: ${error.message}`);
 	}
