@@ -51,18 +51,6 @@ npx create-rainbow-app@latest <project-name>
 yarn create rainbow-app <project-name>
 ```
 
-### From GitHub Packages
-
-This package is also available on GitHub Packages:
-
-```bash
-# Configure npm to use GitHub Packages for the @patel96 scope
-npm config set @patel96:registry https://npm.pkg.github.com
-
-# Install using npx
-npx @patel96/create-rainbow-app <project-name>
-```
-
 ## Installation
 
 If you want to install the package globally:
