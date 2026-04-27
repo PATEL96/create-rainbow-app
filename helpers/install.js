@@ -164,9 +164,9 @@ function installWalletConnectors(packageManager, chalk) {
 	try {
 		console.log(chalk.blue("Installing wallet connector packages..."));
 		const packages = [
-			"@base-org/account",
-			"@coinbase/wallet-sdk",
-			"@metamask/sdk",
+			"@base-org/account@^2.5.1",
+			"@coinbase/wallet-sdk@^4.3.61",
+			"@metamask/connect-evm@~0.9.0",
 			"@safe-global/safe-apps-provider",
 			"@safe-global/safe-apps-sdk",
 			"@walletconnect/ethereum-provider",
